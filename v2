@@ -384,7 +384,7 @@ local THEME_PRESETS = {
 	},
 }
 
-local TEXT_SCALE = 1.16
+local TEXT_SCALE = 1.30
 
 local function copyTable(source)
 	local result = {}
@@ -556,7 +556,7 @@ end
 local function createLabel(window, parent, text, size, font)
 	local label = create("TextLabel", {
 		Parent = parent, BackgroundTransparency = 1,
-		Font = font or Enum.Font.Gotham, Text = text or "",
+		Font = font or Enum.Font.GothamMedium, Text = text or "",
 		TextSize = size or 12,
 		TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Center,
 	})
@@ -583,7 +583,7 @@ local function createBoxedModule(section, height)
 end
 
 local function createBoxedTitle(section, parent, title, rightPadding)
-	local label = createLabel(section.library, parent, tostring(title or "Module"), 12, Enum.Font.GothamMedium)
+	local label = createLabel(section.library, parent, tostring(title or "Module"), 13, Enum.Font.GothamMedium)
 	label.Position = UDim2.fromOffset(12, 0)
 	label.Size = UDim2.new(1, -(rightPadding or 24), 1, 0)
 	bindTheme(section.library, label, "TextColor3", "Text")
@@ -617,7 +617,7 @@ local function createInfoHint(section, parent, infoText, rightInset)
 	local tooltipStroke = stroke(tooltip, window.theme.Stroke, 0.15, 1)
 	bindTheme(window, tooltipStroke, "Color", "Accent")
 
-	local tooltipText = createLabel(window, tooltip, tostring(infoText), 11, Enum.Font.Gotham)
+	local tooltipText = createLabel(window, tooltip, tostring(infoText), 11, Enum.Font.GothamMedium)
 	tooltipText.Position = UDim2.fromOffset(8, 6)
 	tooltipText.TextWrapped = true
 	tooltipText.TextXAlignment = Enum.TextXAlignment.Left
@@ -629,9 +629,9 @@ local function createInfoHint(section, parent, infoText, rightInset)
 	local function updateTooltip()
 		local maxWidth = 220
 		local measureSize = scaledTextSize(11)
-		local firstPass = TextService:GetTextSize(tostring(infoText), measureSize, Enum.Font.Gotham, Vector2.new(maxWidth, 1000))
+		local firstPass = TextService:GetTextSize(tostring(infoText), measureSize, Enum.Font.GothamMedium, Vector2.new(maxWidth, 1000))
 		local width = math.clamp(firstPass.X + 20, 120, maxWidth)
-		local bounds = TextService:GetTextSize(tostring(infoText), measureSize, Enum.Font.Gotham, Vector2.new(width - 16, 1000))
+		local bounds = TextService:GetTextSize(tostring(infoText), measureSize, Enum.Font.GothamMedium, Vector2.new(width - 16, 1000))
 		tooltip.Size = UDim2.fromOffset(width, bounds.Y + 14)
 		tooltipText.Size = UDim2.fromOffset(width - 16, bounds.Y + 2)
 		local iconPos = icon.AbsolutePosition
@@ -795,7 +795,7 @@ function Library.new(data)
 		startupSubtitleLabel.ZIndex = 203
 		bindTheme(self, startupSubtitleLabel, "TextColor3", "Muted")
 
-		startupStatusLabel = createLabel(self, startupCard, self.startupVersion, 9, Enum.Font.Gotham)
+		startupStatusLabel = createLabel(self, startupCard, self.startupVersion, 9, Enum.Font.GothamMedium)
 		startupStatusLabel.AnchorPoint = Vector2.new(0.5, 0)
 		startupStatusLabel.Position = UDim2.new(0.5, 0, 0, 154)
 		startupStatusLabel.Size = UDim2.new(1, -48, 0, 16)
@@ -875,7 +875,7 @@ function Library.new(data)
 		bindTheme(self, keySubtitleLabel, "TextColor3", "Muted")
 		keySubtitleLabel.TextTransparency = 0.35
 
-		local keyDescriptionLabel = createLabel(self, keyCard, self.keyDescription, 10, Enum.Font.Gotham)
+		local keyDescriptionLabel = createLabel(self, keyCard, self.keyDescription, 10, Enum.Font.GothamMedium)
 		keyDescriptionLabel.Position = UDim2.fromOffset(18, 80)
 		keyDescriptionLabel.Size = UDim2.new(1, -36, 0, 18)
 		keyDescriptionLabel.ZIndex = 302
@@ -1189,12 +1189,12 @@ function Library.new(data)
 	})
 	corner(avatar, 18)
 
-	local usernameLabel = createLabel(self, playerProfile, LocalPlayer.DisplayName, 13, Enum.Font.GothamBold)
+	local usernameLabel = createLabel(self, playerProfile, LocalPlayer.DisplayName, 14, Enum.Font.GothamBold)
 	usernameLabel.Position = UDim2.fromOffset(55, 5)
 	usernameLabel.Size = UDim2.new(1, -62, 0, 25)
 	usernameLabel.TextTruncate = Enum.TextTruncate.AtEnd
 
-	local displayNameLabel = createLabel(self, playerProfile, LocalPlayer.Name, 11, Enum.Font.GothamMedium)
+	local displayNameLabel = createLabel(self, playerProfile, LocalPlayer.Name, 12, Enum.Font.GothamMedium)
 	displayNameLabel.Position = UDim2.fromOffset(55, 25)
 	displayNameLabel.Size = UDim2.new(1, -62, 0, 15)
 	displayNameLabel.TextTruncate = Enum.TextTruncate.AtEnd
@@ -1235,7 +1235,7 @@ function Library.new(data)
 	contentHeaderTitle.Position = UDim2.fromOffset(10, 6)
 	contentHeaderTitle.Size = UDim2.new(1, -20, 0, 20)
 
-	local contentHeaderSub = createLabel(self, contentHeader, self.dashboardSubtitle, 10, Enum.Font.Gotham)
+	local contentHeaderSub = createLabel(self, contentHeader, self.dashboardSubtitle, 10, Enum.Font.GothamMedium)
 	contentHeaderSub.Position = UDim2.fromOffset(10, 25)
 	contentHeaderSub.Size = UDim2.new(1, -20, 0, 15)
 	bindTheme(self, contentHeaderSub, "TextColor3", "Muted")
@@ -1813,7 +1813,7 @@ function Library:addPage(data)
 		bindTheme(self, icon, "TextColor3", "Muted")
 	end
 
-	local title = createLabel(self, background, page.title, 12, Enum.Font.GothamMedium)
+	local title = createLabel(self, background, page.title, 13, Enum.Font.GothamMedium)
 	title.Position = UDim2.fromOffset(42, 0)
 	title.Size = UDim2.new(1, -49, 1, 0)
 	bindTheme(self, title, "TextColor3", "Muted")
@@ -1966,7 +1966,7 @@ function Page:addSection(data)
 	})
 
 	-- Section title is OUTSIDE the card and sits at the very top.
-	local title = createLabel(self.library, sectionHolder, section.title, 11, Enum.Font.GothamMedium)
+	local title = createLabel(self.library, sectionHolder, section.title, 13, Enum.Font.GothamBold)
 	title.Position = UDim2.fromOffset(8, 0)
 	title.Size = UDim2.new(1, -16, 0, 18)
 	bindTheme(self.library, title, "TextColor3", "Muted")
@@ -3109,7 +3109,7 @@ function Section:addLabel(data)
 	title.TextWrapped = true
 	title.TextTruncate = Enum.TextTruncate.None
 
-	local subtitle = createLabel(self.library, module, options.subtitle, 11, Enum.Font.Gotham)
+	local subtitle = createLabel(self.library, module, options.subtitle, 11, Enum.Font.GothamMedium)
 	subtitle.TextWrapped = true
 	subtitle.TextTruncate = Enum.TextTruncate.None
 	bindTheme(self.library, subtitle, "TextColor3", "Muted")
@@ -3125,7 +3125,7 @@ function Section:addLabel(data)
 		if hasSubtitle then
 			local availableWidth = math.max(80, module.AbsoluteSize.X - textOffset - 12)
 			local titleBounds = TextService:GetTextSize(options.title, scaledTextSize(13), Enum.Font.GothamBold, Vector2.new(availableWidth, 1000))
-			local subtitleBounds = TextService:GetTextSize(options.subtitle, scaledTextSize(11), Enum.Font.Gotham, Vector2.new(availableWidth, 1000))
+			local subtitleBounds = TextService:GetTextSize(options.subtitle, scaledTextSize(11), Enum.Font.GothamMedium, Vector2.new(availableWidth, 1000))
 			local titleHeight = math.max(22, titleBounds.Y + 4)
 			local subtitleHeight = math.max(18, subtitleBounds.Y + 4)
 			local neededHeight = math.max(options.height, 10 + titleHeight + subtitleHeight + 12)
