@@ -575,16 +575,16 @@ local function createBoxedModule(section, height)
 	-- Neverlose-style row separator; preserves the same module/controller API.
 	local rowLine = create("Frame", {
 		Parent = holder, AnchorPoint = Vector2.new(0.5, 1),
-		Position = UDim2.new(0.5, 0, 1, 0), Size = UDim2.new(1, -20, 0, 1), BorderSizePixel = 0,
+		Position = UDim2.new(0.5, 0, 1, 0), Size = UDim2.new(1, -24, 0, 1), BorderSizePixel = 0,
 	})
 	bindTheme(section.library, rowLine, "BackgroundColor3", "Stroke")
-	rowLine.BackgroundTransparency = 0.82
+	rowLine.BackgroundTransparency = 0.86
 	return holder
 end
 
 local function createBoxedTitle(section, parent, title, rightPadding)
 	local label = createLabel(section.library, parent, tostring(title or "Module"), 12, Enum.Font.GothamMedium)
-	label.Position = UDim2.fromOffset(10, 0)
+	label.Position = UDim2.fromOffset(12, 0)
 	label.Size = UDim2.new(1, -(rightPadding or 24), 1, 0)
 	bindTheme(section.library, label, "TextColor3", "Text")
 	label.TextTransparency = 0.2
@@ -1817,7 +1817,7 @@ function Library:addPage(data)
 	title.Position = UDim2.fromOffset(42, 0)
 	title.Size = UDim2.new(1, -49, 1, 0)
 	bindTheme(self, title, "TextColor3", "Muted")
-	title.TextTransparency = 0.5
+	title.TextTransparency = 0.35
 
 	local pageContainer = create("Frame", {
 		Name = "PageContainer", Parent = self.content,
@@ -1831,8 +1831,9 @@ function Library:addPage(data)
 		BorderSizePixel = 0, CanvasSize = UDim2.new(), ScrollBarThickness = 0,
 	})
 	bindTheme(self, leftColumn, "ScrollBarImageColor3", "Accent")
-	local leftLayout = create("UIListLayout", { Parent = leftColumn, SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 8) })
-	refreshCanvas(leftColumn, leftLayout, 8)
+	local leftLayout = create("UIListLayout", { Parent = leftColumn, SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 12) })
+	padding(leftColumn, 3, 3, 2, 10)
+	refreshCanvas(leftColumn, leftLayout, 12)
 
 	local rightColumn = create("ScrollingFrame", {
 		Name = "RightColumn", Parent = pageContainer,
@@ -1840,8 +1841,9 @@ function Library:addPage(data)
 		BackgroundTransparency = 1, BorderSizePixel = 0, CanvasSize = UDim2.new(), ScrollBarThickness = 0,
 	})
 	bindTheme(self, rightColumn, "ScrollBarImageColor3", "Accent")
-	local rightLayout = create("UIListLayout", { Parent = rightColumn, SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 8) })
-	refreshCanvas(rightColumn, rightLayout, 8)
+	local rightLayout = create("UIListLayout", { Parent = rightColumn, SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 12) })
+	padding(rightColumn, 3, 3, 2, 10)
+	refreshCanvas(rightColumn, rightLayout, 12)
 
 	local fullColumn = create("ScrollingFrame", {
 		Name = "FullColumn", Parent = pageContainer,
@@ -1850,8 +1852,9 @@ function Library:addPage(data)
 		ScrollBarThickness = 0, Visible = false,
 	})
 	bindTheme(self, fullColumn, "ScrollBarImageColor3", "Accent")
-	local fullLayout = create("UIListLayout", { Parent = fullColumn, SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 8) })
-	refreshCanvas(fullColumn, fullLayout, 8)
+	local fullLayout = create("UIListLayout", { Parent = fullColumn, SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 12) })
+	padding(fullColumn, 3, 3, 2, 10)
+	refreshCanvas(fullColumn, fullLayout, 12)
 
 	page._columns = { left = leftColumn, right = rightColumn, full = fullColumn }
 	page.container = pageContainer
@@ -1964,39 +1967,39 @@ function Page:addSection(data)
 
 	-- Section title is OUTSIDE the card and sits at the very top.
 	local title = createLabel(self.library, sectionHolder, section.title, 11, Enum.Font.GothamMedium)
-	title.Position = UDim2.fromOffset(17, 0)
-	title.Size = UDim2.new(1, -35, 0, 15)
+	title.Position = UDim2.fromOffset(8, 0)
+	title.Size = UDim2.new(1, -16, 0, 18)
 	bindTheme(self.library, title, "TextColor3", "Muted")
 	title.TextTransparency = 0.5
 
 	-- Card begins below the title. No divider line.
 	local card = create("Frame", {
 		Parent = sectionHolder,
-		Position = UDim2.fromOffset(5, 20),
-		Size = UDim2.new(1, -10, 0, 10),
+		Position = UDim2.fromOffset(0, 24),
+		Size = UDim2.new(1, 0, 0, 10),
 		AutomaticSize = Enum.AutomaticSize.Y,
 		BorderSizePixel = 0,
 		ClipsDescendants = false,
 	})
 	bindTheme(self.library, card, "BackgroundColor3", "Card")
-	card.BackgroundTransparency = 0.5
-	corner(card, 10)
-	local cardStroke = stroke(card, self.library.theme.Stroke, 0.65, 1)
+	card.BackgroundTransparency = 0.42
+	corner(card, 9)
+	local cardStroke = stroke(card, self.library.theme.Stroke, 0.72, 1)
 	bindTheme(self.library, cardStroke, "Color", "Stroke")
 
 	local moduleContainer = create("Frame", {
 		Parent = card,
-		Position = UDim2.fromOffset(0, 0),
-		Size = UDim2.new(1, 0, 0, 0),
+		Position = UDim2.fromOffset(8, 8),
+		Size = UDim2.new(1, -16, 0, 0),
 		AutomaticSize = Enum.AutomaticSize.Y,
 		BackgroundTransparency = 1,
 	})
 	create("UIListLayout", {
 		Parent = moduleContainer,
 		SortOrder = Enum.SortOrder.LayoutOrder,
-		Padding = UDim.new(0, 0),
+		Padding = UDim.new(0, 4),
 	})
-	padding(moduleContainer, 0, 0, 0, 0)
+	padding(moduleContainer, 0, 0, 0, 8)
 
 	section.container = sectionHolder
 	section.card = card
