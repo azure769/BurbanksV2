@@ -1,3 +1,4 @@
+
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
@@ -1153,28 +1154,25 @@ function Library.new(data)
 
 	local playerProfileDivider = create("Frame", {
 		Name = "PlayerProfileDivider", Parent = sidebar,
-		AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 12, 1, -74),
-		Size = UDim2.new(1, -24, 0, 1), BorderSizePixel = 0,
+		AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 16, 1, -74),
+		Size = UDim2.new(1, -32, 0, 1), BorderSizePixel = 0,
 	})
 	bindTheme(self, playerProfileDivider, "BackgroundColor3", "Stroke")
 	playerProfileDivider.BackgroundTransparency = 0.35
 
+	-- Transparent positioning holder: no profile card, background, corners, or outline.
 	local playerProfile = create("Frame", {
 		Name = "PlayerProfile", Parent = sidebar,
 		AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 10, 1, -10),
-		Size = UDim2.new(1, -20, 0, 58), BorderSizePixel = 0,
+		Size = UDim2.new(1, -20, 0, 58),
+		BackgroundTransparency = 1, BorderSizePixel = 0,
 	})
-	bindTheme(self, playerProfile, "BackgroundColor3", "Card")
-	playerProfile.BackgroundTransparency = 0.45
-	corner(playerProfile, 9)
-	local playerProfileStroke = stroke(playerProfile, self.theme.Accent, 0.5, 1)
-	bindTheme(self, playerProfileStroke, "Color", "Accent")
 
 	local avatarHolder = create("Frame", {
 		Parent = playerProfile, Position = UDim2.fromOffset(8, 8),
-		Size = UDim2.fromOffset(42, 42), BorderSizePixel = 0,
+		Size = UDim2.fromOffset(42, 42),
+		BackgroundTransparency = 1, BorderSizePixel = 0,
 	})
-	bindTheme(self, avatarHolder, "BackgroundColor3", "Background2")
 	corner(avatarHolder, 21)
 
 	local avatar = create("ImageLabel", {
