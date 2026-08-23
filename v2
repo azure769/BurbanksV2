@@ -824,6 +824,73 @@ function Library.new(data)
 		ResetOnSpawn = false, ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
 	})
 
+
+	-- Separate NeverLose-style top-screen ping watermark.
+	local pingFrame = create("Frame", {
+		Name = "NeverLosePing", Parent = screenGui,
+		AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -10, 0, 10),
+		Size = UDim2.fromOffset(102, 30), BorderSizePixel = 0,
+		ClipsDescendants = true, ZIndex = 160,
+	})
+	bindTheme(self, pingFrame, "BackgroundColor3", "Background")
+	pingFrame.BackgroundTransparency = 0.20
+	corner(pingFrame, 25)
+	local pingStroke = stroke(pingFrame, self.theme.Stroke, 0.70, 1)
+	bindTheme(self, pingStroke, "Color", "Stroke")
+
+	local pingIcon = createLucideIcon(self, pingFrame, "wifi", 16, {
+		AnchorPoint = Vector2.new(0, 0.5),
+		Position = UDim2.new(0, 10, 0.5, 0),
+		Size = UDim2.fromOffset(16, 16), ZIndex = 161,
+	}, "Accent")
+	pingIcon.ImageTransparency = 0.15
+
+	local pingLabel = createLabel(self, pingFrame, "-- ms", 12, Enum.Font.GothamBold)
+	pingLabel.Position = UDim2.fromOffset(34, 0)
+	pingLabel.Size = UDim2.new(1, -43, 1, 0)
+	pingLabel.TextXAlignment = Enum.TextXAlignment.Left
+	pingLabel.TextTransparency = 0.20
+	pingLabel.ZIndex = 161
+	bindTheme(self, pingLabel, "TextColor3", "Muted")
+
+	self.pingFrame = pingFrame
+	self.pingLabel = pingLabel
+
+	task.spawn(function()
+		while screenGui and screenGui.Parent and pingFrame and pingFrame.Parent do
+			local ms
+			local success, value = pcall(function()
+				return LocalPlayer:GetNetworkPing() * 1000
+			end)
+			if success and typeof(value) == "number" then
+				ms = math.max(0, math.floor(value + 0.5))
+			end
+
+			if not ms then
+				local statsSuccess, statsValue = pcall(function()
+					local stats = game:GetService("Stats")
+					local item = stats.Network.ServerStatsItem["Data Ping"]
+					return item:GetValue()
+				end)
+				if statsSuccess and typeof(statsValue) == "number" then
+					ms = math.max(0, math.floor(statsValue + 0.5))
+				end
+			end
+
+			if pingLabel and pingLabel.Parent then
+				pingLabel.Text = ms and (tostring(ms) .. " ms") or "-- ms"
+
+				local textWidth = TextService:GetTextSize(
+					pingLabel.Text, scaledTextSize(12), Enum.Font.GothamBold, Vector2.new(math.huge, 30)
+				).X
+				tween(pingFrame, 0.175, {
+					Size = UDim2.fromOffset(math.max(88, textWidth + 52), 30)
+				})
+			end
+			task.wait(1)
+		end
+	end)
+
 	local startupOverlay, startupCard, startupCardScale, startupLogo
 	local startupTitleLabel, startupSubtitleLabel, startupStatusLabel
 	local startupProgress, startupProgressFill, startupBlur
@@ -1900,78 +1967,144 @@ end
 
 function Library:Notify(data)
 	data = data or {}
+
+	-- NeverLose notification stack: top-right, below the separate ping watermark.
 	if not self._notificationStack or not self._notificationStack.Parent then
 		local notificationStack = create("Frame", {
-			Name = "NotificationStack", Parent = self.container,
-			AnchorPoint = Vector2.new(1, 1), Position = UDim2.new(1, -16, 1, -16),
-			Size = UDim2.new(1, -32, 1, -32), BackgroundTransparency = 1, BorderSizePixel = 0, ZIndex = 49,
+			Name = "NeverLoseNotificationStack", Parent = self.container,
+			AnchorPoint = Vector2.new(1, 0),
+			Position = UDim2.new(1, -25, 0, 50),
+			Size = UDim2.fromOffset(25, 25),
+			BackgroundTransparency = 1, BorderSizePixel = 0,
+			ZIndex = 170,
 		})
 		create("UIListLayout", {
-			Parent = notificationStack, FillDirection = Enum.FillDirection.Vertical,
-			HorizontalAlignment = Enum.HorizontalAlignment.Right, VerticalAlignment = Enum.VerticalAlignment.Bottom,
-			SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 10),
+			Parent = notificationStack,
+			HorizontalAlignment = Enum.HorizontalAlignment.Right,
+			SortOrder = Enum.SortOrder.LayoutOrder,
+			Padding = UDim.new(0, 0),
 		})
 		self._notificationStack = notificationStack
 		self._notificationOrder = 0
 	end
 
 	self._notificationOrder = (self._notificationOrder or 0) + 1
-	local holder = create("Frame", {
-		Parent = self._notificationStack, Size = UDim2.fromOffset(0, 140),
+
+	local titleText = tostring(data.title or data.Title or "Notification")
+	local contentText = tostring(
+		data.content or data.Content or data.text or data.Text or "Notification"
+	)
+	local duration = tonumber(data.duration or data.Duration) or 5
+	local iconName = tostring(
+		data.icon or data.Icon or data.lucideIcon or data.LucideIcon or "bell"
+	)
+
+	-- NeverLose's container is 65px high for a 55px notification.
+	local containerFrame = create("Frame", {
+		Name = "NotificationContainer", Parent = self._notificationStack,
+		Size = UDim2.fromOffset(0, 65),
+		BackgroundTransparency = 1, BorderSizePixel = 0,
+		LayoutOrder = self._notificationOrder, ZIndex = 170,
+	})
+
+	local notifyFrame = create("Frame", {
+		Name = "Notification", Parent = containerFrame,
+		AnchorPoint = Vector2.new(1, 0),
+		Position = UDim2.new(0, 750, 0, 0),
+		Size = UDim2.fromOffset(220, 55),
 		BorderSizePixel = 0, ClipsDescendants = true,
-		LayoutOrder = self._notificationOrder, ZIndex = 50,
+		ZIndex = 171,
 	})
-	bindTheme(self, holder, "BackgroundColor3", "Card")
-	holder.BackgroundTransparency = 0.075
-	corner(holder, 12)
-	local holderStroke = stroke(holder, self.theme.Stroke, 0.5, 1)
-	bindTheme(self, holderStroke, "Color", "Stroke")
+	bindTheme(self, notifyFrame, "BackgroundColor3", "Card")
+	notifyFrame.BackgroundTransparency = 0.075
+	corner(notifyFrame, 10)
 
-	local progressTrack = create("Frame", {
-		Parent = holder, AnchorPoint = Vector2.new(0, 1),
-		Position = UDim2.new(0, 0, 1, 0), Size = UDim2.new(1, 0, 0, 3), BorderSizePixel = 0, ZIndex = 52,
+	local notifyStroke = stroke(notifyFrame, self.theme.Stroke, 0.650, 1)
+	bindTheme(self, notifyStroke, "Color", "Stroke")
+
+	-- NeverLose has a 35x35 logo on the left; this version uses Lucide,
+	-- so every notification icon remains consistent with the rest of the UI.
+	local iconHolder = create("Frame", {
+		Parent = notifyFrame,
+		AnchorPoint = Vector2.new(0, 0.5),
+		Position = UDim2.new(0, 10, 0.5, 0),
+		Size = UDim2.fromOffset(35, 35),
+		BackgroundTransparency = 1, BorderSizePixel = 0,
+		ZIndex = 172,
 	})
-	bindTheme(self, progressTrack, "BackgroundColor3", "Background2")
-	local progressFill = create("Frame", { Parent = progressTrack, Size = UDim2.new(0, 0, 1, 0), BorderSizePixel = 0, ZIndex = 53 })
-	bindTheme(self, progressFill, "BackgroundColor3", "Accent")
 
-	local title = createLabel(self, holder, tostring(data.title or data.Title or "NOTIFICATION"), 16, Enum.Font.GothamBold)
-	title.Position = UDim2.fromOffset(20, 16)
-	title.Size = UDim2.new(1, -40, 0, 28)
-	title.ZIndex = 51
+	local notifyIcon = createLucideIcon(self, iconHolder, iconName, 21, {
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.fromScale(0.5, 0.5),
+		Size = UDim2.fromOffset(21, 21),
+		ZIndex = 173,
+	}, "Accent")
+	notifyIcon.ImageTransparency = 0
 
-	local text = createLabel(self, holder, tostring(data.text or data.Text or ""), 14, Enum.Font.GothamMedium)
-	text.Position = UDim2.fromOffset(20, 50)
-	text.Size = UDim2.new(1, -40, 0, 66)
-	text.TextWrapped = true
-	text.TextYAlignment = Enum.TextYAlignment.Top
-	text.ZIndex = 51
-	bindTheme(self, text, "TextColor3", "Muted")
-	text.TextTransparency = 0.5
+	local title = createLabel(self, notifyFrame, titleText, 17, Enum.Font.GothamBold)
+	title.Position = UDim2.fromOffset(50, 7)
+	title.Size = UDim2.new(1, -60, 0, 20)
+	title.TextXAlignment = Enum.TextXAlignment.Left
+	title.TextTransparency = 0
+	title.ZIndex = 173
 
-	local measured = TextService:GetTextSize(text.Text, scaledTextSize(14), Enum.Font.GothamMedium, Vector2.new(480, 80))
-	local width = math.clamp(measured.X + 100, 430, 680)
-	tween(holder, 0.2, { Size = UDim2.fromOffset(width, 140) })
+	local content = createLabel(self, notifyFrame, contentText, 12, Enum.Font.GothamBold)
+	content.Position = UDim2.fromOffset(50, 28)
+	content.Size = UDim2.new(1, -60, 0, 15)
+	content.TextXAlignment = Enum.TextXAlignment.Left
+	content.TextTransparency = 0.650
+	content.TextTruncate = Enum.TextTruncate.AtEnd
+	content.ZIndex = 173
+	bindTheme(self, content, "TextColor3", "Text")
+
+	-- NeverLose sizes a notification dynamically from the larger text line.
+	local titleSize = TextService:GetTextSize(
+		title.Text, scaledTextSize(17), Enum.Font.GothamBold, Vector2.new(math.huge, math.huge)
+	)
+	local contentSize = TextService:GetTextSize(
+		content.Text, scaledTextSize(12), Enum.Font.GothamBold, Vector2.new(math.huge, math.huge)
+	)
+	local mainWidth = math.max(titleSize.X, contentSize.X)
+	local finalWidth = math.clamp(mainWidth + 65, 220, 430)
+	notifyFrame.Size = UDim2.fromOffset(finalWidth, 55)
+
+	-- Slide in from the right just like NeverLose.
+	tween(
+		notifyFrame, 0.5,
+		{ Position = UDim2.new(1, 0, 0, 0) },
+		Enum.EasingStyle.Quint, Enum.EasingDirection.Out
+	)
 
 	local closed = false
-	local progressTween
-
 	local function close(result)
 		if closed then return end
 		closed = true
-		if progressTween then progressTween:Cancel() end
 		safeCall(data.callback or data.Callback, result)
-		tween(holder, 0.2, { Size = UDim2.fromOffset(0, 140) }).Completed:Wait()
-		holder:Destroy()
+
+		-- NeverLose fades the card, stroke, logo and text before removal.
+		tween(notifyFrame, 0.175, { BackgroundTransparency = 1 })
+		tween(notifyStroke, 0.175, { Transparency = 1 })
+		tween(notifyIcon, 0.175, { ImageTransparency = 1 })
+		tween(title, 0.175, { TextTransparency = 1 })
+		tween(content, 0.175, { TextTransparency = 1 })
+
+		task.delay(0.19, function()
+			if containerFrame and containerFrame.Parent then
+				containerFrame:Destroy()
+			end
+		end)
 	end
 
-	local duration = tonumber(data.duration) or 5
-	progressTween = tween(progressFill, duration, { Size = UDim2.new(1, 0, 1, 0) }, Enum.EasingStyle.Linear, Enum.EasingDirection.Out)
-	progressTween.Completed:Connect(function(playbackState)
-		if playbackState == Enum.PlaybackState.Completed and holder.Parent then close(nil) end
+	task.delay(duration, function()
+		if containerFrame and containerFrame.Parent then
+			close(nil)
+		end
 	end)
 
-	return { Instance = holder, Close = close }
+	return {
+		Instance = notifyFrame,
+		Close = close,
+	}
 end
 
 function Library:addPage(data)
