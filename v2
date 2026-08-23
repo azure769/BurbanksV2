@@ -577,33 +577,101 @@ local function createLabel(window, parent, text, size, font)
 	return label
 end
 
+
+local LUCIDE_ALIASES = {
+	["magnifying-glass"] = "search",
+	["magnifying-glass-minus"] = "zoom-out",
+	["magnifying-glass-plus"] = "zoom-in",
+	["chevron-small-left"] = "chevron-left",
+	["chevron-small-right"] = "chevron-right",
+	["chevron-small-up"] = "chevron-up",
+	["chevron-small-down"] = "chevron-down",
+	["chevron-large-left"] = "chevron-left",
+	["chevron-large-right"] = "chevron-right",
+	["chevron-large-up"] = "chevron-up",
+	["chevron-large-down"] = "chevron-down",
+	["floppy-disk"] = "save",
+	["gear"] = "settings",
+	["circle-i"] = "info",
+	["circle-question"] = "circle-help",
+	["crosshairs"] = "crosshair",
+	["person"] = "user",
+	["circle-person"] = "circle-user",
+	["paint-brush"] = "paintbrush",
+	["lightning-bolt"] = "zap",
+	["location-pin"] = "map-pin",
+	["envelope"] = "mail",
+	["house"] = "house",
+	["key"] = "key-round",
+}
+
+local function normalizeLucideName(name)
+	name = string.lower(tostring(name or "circle"))
+	name = string.gsub(name, "_", "-")
+	return LUCIDE_ALIASES[name] or name
+end
+
+local function createLucideIcon(window, parent, iconName, size, properties, themeName)
+	local props = {
+		Parent = parent,
+		BackgroundTransparency = 1,
+		Size = UDim2.fromOffset(size or 16, size or 16),
+		ScaleType = Enum.ScaleType.Fit,
+		ZIndex = 20,
+	}
+	for key, value in pairs(properties or {}) do
+		props[key] = value
+	end
+
+	local lucide = getLucide()
+	if lucide and typeof(lucide.ImageLabel) == "function" then
+		local ok, icon = pcall(function()
+			return lucide.ImageLabel(normalizeLucideName(iconName), 48, props)
+		end)
+		if ok and icon then
+			bindTheme(window, icon, "ImageColor3", themeName or "Text")
+			return icon
+		end
+	end
+
+	-- Graceful fallback only if Lucide cannot load in the executor.
+	-- Return an ImageLabel so icon animation code stays type-safe.
+	local fallback = create("ImageLabel", {
+		Parent = parent,
+		BackgroundTransparency = 1,
+		Size = props.Size,
+		Position = props.Position or UDim2.new(),
+		AnchorPoint = props.AnchorPoint or Vector2.new(),
+		Image = "",
+		ScaleType = Enum.ScaleType.Fit,
+		ZIndex = props.ZIndex or 20,
+	})
+	bindTheme(window, fallback, "ImageColor3", themeName or "Text")
+	return fallback
+end
+
 local function createBoxedModule(section, height)
 	local holder = create("Frame", {
 		Parent = section.moduleContainer,
-		Size = UDim2.new(1, 0, 0, height or 30),
+		Size = UDim2.new(1, -10, 0, height or 30),
 		BorderSizePixel = 0,
-		BackgroundTransparency = 1,
+		BackgroundTransparency = 0.72,
+		ClipsDescendants = false,
 	})
 	bindTheme(section.library, holder, "BackgroundColor3", "Card2")
-	corner(holder, 10)
+	corner(holder, 6)
 
-	-- NeverLose uses flat option rows inside a translucent section body.
-	local line = create("Frame", {
-		Name = "NLDivider", Parent = holder, AnchorPoint = Vector2.new(0.5, 1),
-		Position = UDim2.new(0.5, 0, 1, 0), Size = UDim2.new(1, -20, 0, 1),
-		BorderSizePixel = 0,
-	})
-	bindTheme(section.library, line, "BackgroundColor3", "Stroke")
-	line.BackgroundTransparency = 0.65
+	local rowStroke = stroke(holder, section.library.theme.Stroke, 0.84, 1)
+	bindTheme(section.library, rowStroke, "Color", "Stroke")
 	return holder
 end
 
 local function createBoxedTitle(section, parent, title, rightPadding)
-	local label = createLabel(section.library, parent, tostring(title or "Module"), 13, Enum.Font.GothamMedium)
-	label.Position = UDim2.fromOffset(10, 0)
-	label.Size = UDim2.new(1, -(rightPadding or 24), 1, 0)
+	local label = createLabel(section.library, parent, tostring(title or "Module"), 12, Enum.Font.GothamMedium)
+	label.Position = UDim2.fromOffset(12, 0)
+	label.Size = UDim2.new(1, -(rightPadding or 26), 1, 0)
 	bindTheme(section.library, label, "TextColor3", "Text")
-	label.TextTransparency = 0.2
+	label.TextTransparency = 0.12
 	label.TextTruncate = Enum.TextTruncate.AtEnd
 	return label
 end
@@ -621,12 +689,16 @@ local function createInfoHint(section, parent, infoText, rightInset)
 
 	local icon = create("TextButton", {
 		Parent = module, AnchorPoint = Vector2.new(1, 0.5),
-		Position = UDim2.new(1, -4, 0.5, 0), Size = UDim2.fromOffset(22, 22),
+		Position = UDim2.new(1, -5, 0.5, 0), Size = UDim2.fromOffset(22, 22),
 		BackgroundTransparency = 1, BorderSizePixel = 0, AutoButtonColor = false,
-		Font = Enum.Font.GothamBold, Text = "ⓘ", TextSize = 17, ZIndex = 100,
+		Text = "", ZIndex = 100,
 	})
-	bindTheme(window, icon, "TextColor3", "Accent")
-	icon.TextTransparency = 0
+	local infoGlyph = createLucideIcon(window, icon, "info", 15, {
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.fromScale(0.5, 0.5),
+		ZIndex = 101,
+	}, "Accent")
+	infoGlyph.ImageTransparency = 0.08
 
 	local tooltip = create("Frame", { Parent = window.container, Visible = false, BorderSizePixel = 0, ZIndex = 500 })
 	bindTheme(window, tooltip, "BackgroundColor3", "Background2")
@@ -1110,17 +1182,19 @@ function Library.new(data)
 	bindTheme(self, headLine, "BackgroundColor3", "Stroke")
 	headLine.BackgroundTransparency = 0.65
 
-	-- Kept for Burbanks' collapse behavior, but styled as a subtle NeverLose header glyph.
+	-- Kept for Burbanks' collapse behavior, now rendered with Lucide.
 	local sidebarCollapse = create("TextButton", {
 		Name = "SidebarCollapse", Parent = headFrame,
 		AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -5, 0.5, 0),
 		Size = UDim2.fromOffset(20, 20), BackgroundTransparency = 1, BorderSizePixel = 0,
-		Text = "chevron-small-left", TextSize = 16,
-		AutoButtonColor = false, ZIndex = 20,
+		Text = "", AutoButtonColor = false, ZIndex = 20,
 	})
-	bindTheme(self, sidebarCollapse, "TextColor3", "Muted")
-	sidebarCollapse.FontFace = NL_ICON_BOLD
-	sidebarCollapse.TextTransparency = 0.55
+	local sidebarCollapseIcon = createLucideIcon(self, sidebarCollapse, "chevron-left", 14, {
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.fromScale(0.5, 0.5),
+		Size = UDim2.fromOffset(14, 14), ZIndex = 21,
+	}, "Muted")
+	sidebarCollapseIcon.ImageTransparency = 0.35
 
 	local pageButtons = create("ScrollingFrame", {
 		Name = "LeftScrollingFrame", Parent = sidebar, Active = true,
@@ -1175,20 +1249,18 @@ function Library.new(data)
 	displayNameLabel.TextTransparency = 0.65
 	displayNameLabel.ZIndex = 7
 
-	local profileChevron = createLabel(self, playerProfile, "chevron-large-right", 13, Enum.Font.GothamBold)
-	profileChevron.AnchorPoint = Vector2.new(1, 0.5)
-	profileChevron.Position = UDim2.new(1, -7, 0.5, 0)
-	profileChevron.Size = UDim2.fromOffset(25, 25)
-	profileChevron.TextXAlignment = Enum.TextXAlignment.Center
-	profileChevron.FontFace = NL_ICON_BOLD
-	profileChevron.TextTransparency = 0.5
-	profileChevron.ZIndex = 7
+	local profileChevron = createLucideIcon(self, playerProfile, "chevron-right", 15, {
+		AnchorPoint = Vector2.new(1, 0.5),
+		Position = UDim2.new(1, -10, 0.5, 0),
+		Size = UDim2.fromOffset(18, 18), ZIndex = 7,
+	}, "Muted")
+	profileChevron.ImageTransparency = 0.42
 
 	playerProfile.MouseEnter:Connect(function()
-		tween(profileChevron, 0.175, { TextTransparency = 0.25 })
+		tween(profileChevron, 0.175, { ImageTransparency = 0.15 })
 	end)
 	playerProfile.MouseLeave:Connect(function()
-		tween(profileChevron, 0.175, { TextTransparency = 0.5 })
+		tween(profileChevron, 0.175, { ImageTransparency = 0.42 })
 	end)
 
 	task.spawn(function()
@@ -1235,12 +1307,12 @@ function Library.new(data)
 	local configStroke = stroke(configFrame, self.theme.Stroke, 0.65, 1)
 	bindTheme(self, configStroke, "Color", "Stroke")
 
-	local configIcon = createLabel(self, configFrame, "floppy-disk", 12, Enum.Font.GothamBold)
-	configIcon.Position = UDim2.fromOffset(2, 0)
-	configIcon.Size = UDim2.fromOffset(28, 30)
-	configIcon.TextXAlignment = Enum.TextXAlignment.Center
-	configIcon.FontFace = NL_ICON_BOLD
-	configIcon.TextTransparency = 0.25
+	local configIcon = createLucideIcon(self, configFrame, "save", 14, {
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.new(0, 15, 0.5, 0),
+		Size = UDim2.fromOffset(16, 16), ZIndex = 10,
+	}, "Text")
+	configIcon.ImageTransparency = 0.25
 
 	local configDivider = create("Frame", {
 		Parent = configFrame, Position = UDim2.fromOffset(30, 0),
@@ -1283,11 +1355,12 @@ function Library.new(data)
 		Parent = contentHeader, AnchorPoint = Vector2.new(1, 0.5),
 		Position = UDim2.new(1, -10, 0.5, 0), Size = UDim2.fromOffset(25, 25),
 		BackgroundTransparency = 1, BorderSizePixel = 0,
-		Font = Enum.Font.GothamBold, Text = "—", TextSize = 16,
-		AutoButtonColor = false, ZIndex = 15,
+		Text = "", AutoButtonColor = false, ZIndex = 15,
 	})
-	bindTheme(self, minimize, "TextColor3", "Muted")
-	minimize.TextTransparency = 0.5
+	local minimizeGlyph = createLucideIcon(self, minimize, "minus", 15, {
+		AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), ZIndex = 16,
+	}, "Muted")
+	minimizeGlyph.ImageTransparency = 0.35
 
 	local searchFrame = create("Frame", {
 		Name = "SearchFrame", Parent = contentHeader,
@@ -1300,12 +1373,12 @@ function Library.new(data)
 		Name = "SearchIcon", Parent = searchFrame,
 		AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 2, 0.5, 0),
 		Size = UDim2.fromOffset(25, 25), BackgroundTransparency = 1,
-		BorderSizePixel = 0, AutoButtonColor = false,
-		Text = "magnifying-glass", TextSize = 16, ZIndex = 13,
+		BorderSizePixel = 0, AutoButtonColor = false, Text = "", ZIndex = 13,
 	})
-	bindTheme(self, searchIcon, "TextColor3", "Text")
-	searchIcon.FontFace = NL_ICON_BOLD
-	searchIcon.TextTransparency = 0.45
+	local searchGlyph = createLucideIcon(self, searchIcon, "search", 15, {
+		AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), ZIndex = 14,
+	}, "Text")
+	searchGlyph.ImageTransparency = 0.38
 
 	local searchBox = create("TextBox", {
 		Name = "SearchBox", Parent = searchFrame,
@@ -1313,7 +1386,7 @@ function Library.new(data)
 		Size = UDim2.new(1, -35, 0, 25), BackgroundTransparency = 1,
 		BorderSizePixel = 0, ClearTextOnFocus = false,
 		Font = Enum.Font.GothamMedium, PlaceholderText = "Search",
-		Text = "", TextSize = 13, TextXAlignment = Enum.TextXAlignment.Left,
+		Text = "", TextSize = 12, TextXAlignment = Enum.TextXAlignment.Left,
 		TextTransparency = 1, ZIndex = 13,
 	})
 	bindTheme(self, searchBox, "TextColor3", "Text")
@@ -1323,7 +1396,7 @@ function Library.new(data)
 	local function setSearchOpen(state)
 		searchOpen = state == true
 		tween(searchFrame, 0.5, { Size = UDim2.fromOffset(searchOpen and 220 or 30, 30) }, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
-		tween(searchIcon, 0.175, { TextTransparency = searchOpen and 0.25 or 0.45 })
+		tween(searchGlyph, 0.175, { ImageTransparency = searchOpen and 0.12 or 0.38 })
 		tween(searchBox, 0.35, { TextTransparency = searchOpen and 0.35 or 1 })
 		if searchOpen then
 			task.defer(function()
@@ -1338,10 +1411,10 @@ function Library.new(data)
 		setSearchOpen(not searchOpen)
 	end)
 	searchIcon.MouseEnter:Connect(function()
-		tween(searchIcon, 0.175, { TextTransparency = 0.25 })
+		tween(searchGlyph, 0.175, { ImageTransparency = 0.12 })
 	end)
 	searchIcon.MouseLeave:Connect(function()
-		tween(searchIcon, 0.175, { TextTransparency = searchOpen and 0.25 or 0.45 })
+		tween(searchGlyph, 0.175, { ImageTransparency = searchOpen and 0.12 or 0.38 })
 	end)
 
 	local function applySearch(query)
@@ -1388,6 +1461,7 @@ function Library.new(data)
 	self.contentHeader = contentHeader
 	self.sidebar = sidebar
 	self.sidebarCollapseButton = sidebarCollapse
+	self.sidebarCollapseIcon = sidebarCollapseIcon
 	self.playerProfile = playerProfile
 	self.playerProfileDivider = playerProfileDivider
 	self.navigationLabel = navigationLabel
@@ -1539,7 +1613,7 @@ function Library:SetSidebarCollapsed(state)
 	if self.navigationLabel then self.navigationLabel.Visible = false end
 	if self.playerProfile then self.playerProfile.Visible = not self.sidebarCollapsed end
 	if self.playerProfileDivider then self.playerProfileDivider.Visible = not self.sidebarCollapsed end
-	if self.sidebarCollapseButton then self.sidebarCollapseButton.Text = self.sidebarCollapsed and "chevron-small-right" or "chevron-small-left" end
+	if self.sidebarCollapseIcon then tween(self.sidebarCollapseIcon, 0.18, { Rotation = self.sidebarCollapsed and 180 or 0 }) end
 
 	if self.titleLabel then self.titleLabel.Visible = not self.sidebarCollapsed end
 	if self.subtitleLabel then self.subtitleLabel.Visible = not self.sidebarCollapsed end
@@ -1927,50 +2001,34 @@ function Library:addPage(data)
 		BackgroundTransparency = 1, BorderSizePixel = 0,
 	})
 
-	local iconName = data.icon or data.Icon
-	local fallbackIconText = tostring(data.iconText or data.IconText or "◆")
+	local iconName = data.icon or data.Icon or data.iconText or data.IconText or "layout-grid"
+	local iconValue = tostring(iconName)
 	local icon
 
-	if iconName ~= nil then
-		local iconValue = tostring(iconName)
-		if iconValue:match("^rbxassetid://") or iconValue:match("^https?://") or tonumber(iconValue) then
-			local imageUrl = tonumber(iconValue) and ("rbxassetid://" .. iconValue) or iconValue
-			icon = create("ImageLabel", {
-				Parent = background, BackgroundTransparency = 1,
-				AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 2, 0.5, 0),
-				Size = UDim2.fromOffset(18, 18), Image = imageUrl, ScaleType = Enum.ScaleType.Fit,
-				ZIndex = 9,
-			})
-			bindTheme(self, icon, "ImageColor3", "Muted")
-		else
-			icon = createLabel(self, background, string.lower(iconValue), 16, Enum.Font.GothamBold)
-			icon.AnchorPoint = Vector2.new(0, 0.5)
-			icon.Position = UDim2.new(0, 2, 0.5, 0)
-			icon.Size = UDim2.fromOffset(25, 25)
-			icon.TextXAlignment = Enum.TextXAlignment.Center
-			icon.FontFace = NL_ICON_BOLD
-			icon.ZIndex = 9
-			bindTheme(self, icon, "TextColor3", "Muted")
-		end
-	end
-
-	if not icon then
-		icon = createLabel(self, background, fallbackIconText, 15, Enum.Font.GothamBold)
-		icon.AnchorPoint = Vector2.new(0, 0.5)
-		icon.Position = UDim2.new(0, 2, 0.5, 0)
-		icon.Size = UDim2.fromOffset(25, 25)
-		icon.TextXAlignment = Enum.TextXAlignment.Center
-		icon.ZIndex = 9
-		bindTheme(self, icon, "TextColor3", "Muted")
+	if iconValue:match("^rbxassetid://") or iconValue:match("^https?://") or tonumber(iconValue) then
+		local imageUrl = tonumber(iconValue) and ("rbxassetid://" .. iconValue) or iconValue
+		icon = create("ImageLabel", {
+			Parent = background, BackgroundTransparency = 1,
+			AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 7, 0.5, 0),
+			Size = UDim2.fromOffset(16, 16), Image = imageUrl, ScaleType = Enum.ScaleType.Fit,
+			ZIndex = 9,
+		})
+		bindTheme(self, icon, "ImageColor3", "Muted")
+	else
+		icon = createLucideIcon(self, background, iconValue, 16, {
+			AnchorPoint = Vector2.new(0, 0.5),
+			Position = UDim2.new(0, 7, 0.5, 0),
+			Size = UDim2.fromOffset(16, 16), ZIndex = 9,
+		}, "Muted")
 	end
 
 	local title = createLabel(self, background, page.title, 12, Enum.Font.GothamMedium)
 	title.AnchorPoint = Vector2.new(0, 0.5)
-	title.Position = UDim2.new(0, 30, 0.5, 0)
-	title.Size = UDim2.new(1, -37, 0, 15)
+	title.Position = UDim2.new(0, 34, 0.5, 0)
+	title.Size = UDim2.new(1, -42, 0, 15)
 	title.ZIndex = 9
 	bindTheme(self, title, "TextColor3", "Text")
-	title.TextTransparency = 0.5
+	title.TextTransparency = 0.42
 	title.TextTruncate = Enum.TextTruncate.AtEnd
 
 	local pageContainer = create("Frame", {
@@ -2130,7 +2188,7 @@ function Page:addSection(data)
 		ZIndex = 9,
 	})
 
-	local title = createLabel(self.library, card, section.title, 11, Enum.Font.GothamMedium)
+	local title = createLabel(self.library, card, section.title, 10, Enum.Font.GothamBold)
 	title.AnchorPoint = Vector2.new(0.5, 0)
 	title.Position = UDim2.new(0.5, 0, 0, 0)
 	title.Size = UDim2.new(1, -35, 0, 15)
@@ -2144,18 +2202,23 @@ function Page:addSection(data)
 		BorderSizePixel = 0, ClipsDescendants = false, ZIndex = 9,
 	})
 	bindTheme(self.library, sectionHandler, "BackgroundColor3", "Card")
-	sectionHandler.BackgroundTransparency = 0.5
+	sectionHandler.BackgroundTransparency = 0.68
 	corner(sectionHandler, 10)
-	local handlerStroke = stroke(sectionHandler, self.library.theme.Stroke, 0.65, 1)
+	local handlerStroke = stroke(sectionHandler, self.library.theme.Stroke, 0.78, 1)
 	bindTheme(self.library, handlerStroke, "Color", "Stroke")
 
 	local moduleContainer = create("Frame", {
 		Parent = sectionHandler, Size = UDim2.new(1, 0, 0, 0),
 		AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1,
 	})
+	create("UIPadding", {
+		Parent = moduleContainer,
+		PaddingTop = UDim.new(0, 6), PaddingBottom = UDim.new(0, 6),
+		PaddingLeft = UDim.new(0, 0), PaddingRight = UDim.new(0, 0),
+	})
 	create("UIListLayout", {
 		Parent = moduleContainer, HorizontalAlignment = Enum.HorizontalAlignment.Center,
-		SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 0),
+		SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 5),
 	})
 
 	section.container = card
@@ -2181,23 +2244,24 @@ function Section:addButton(data)
 	})
 	local infoText = getInfoText(data)
 
-	local iconText = tostring(data.iconText or data.IconText or "›")
-	local icon = createLabel(self.library, button, iconText, 16, Enum.Font.GothamBold)
-	icon.Position = UDim2.fromOffset(11, 5)
-	icon.Size = UDim2.fromOffset(18, 18)
-	icon.TextXAlignment = Enum.TextXAlignment.Center
-	icon.TextTransparency = 0.25
+	local iconName = tostring(data.icon or data.Icon or data.iconText or data.IconText or "chevron-right")
+	local icon = createLucideIcon(self.library, button, iconName, 14, {
+		AnchorPoint = Vector2.new(0, 0.5),
+		Position = UDim2.new(0, 12, 0.5, 0),
+		Size = UDim2.fromOffset(14, 14), ZIndex = 4,
+	}, "Muted")
+	icon.ImageTransparency = 0.25
 
-	local title = createBoxedTitle(self, button, options.title, infoText and 70 or 40)
-	title.Position = UDim2.fromOffset(35, 0)
-	title.Size = UDim2.new(1, -(infoText and 78 or 43), 1, 0)
+	local title = createBoxedTitle(self, button, options.title, infoText and 72 or 42)
+	title.Position = UDim2.fromOffset(36, 0)
+	title.Size = UDim2.new(1, -(infoText and 80 or 46), 1, 0)
 	createInfoHint(self, button, infoText, 34)
 
 	button.MouseEnter:Connect(function()
-		tween(module, 0.175, { BackgroundTransparency = 0.35 })
+		tween(module, 0.175, { BackgroundTransparency = 0.52 })
 	end)
 	button.MouseLeave:Connect(function()
-		tween(module, 0.175, { BackgroundTransparency = 1 })
+		tween(module, 0.175, { BackgroundTransparency = 0.72 })
 	end)
 	button.MouseButton1Click:Connect(function()
 		tween(module, 0.07, { Size = UDim2.new(1, -4, 0, 30) })
@@ -2237,7 +2301,7 @@ function Section:addToggle(data)
 	local track = create("Frame", {
 		Parent = button, AnchorPoint = Vector2.new(1, 0.5),
 		Position = UDim2.new(1, infoText and -34 or -10, 0.5, 0),
-		Size = UDim2.fromOffset(30, 18), BorderSizePixel = 0,
+		Size = UDim2.fromOffset(32, 18), BorderSizePixel = 0,
 	})
 	bindTheme(self.library, track, "BackgroundColor3", "Background2")
 	corner(track, 18)
@@ -2314,7 +2378,7 @@ function Section:addTextbox(data)
 
 	local holder = create("Frame", {
 		Parent = module, AnchorPoint = Vector2.new(1, 0),
-		Position = UDim2.new(1, -10, 0, 6), Size = UDim2.fromOffset(135, 18), BorderSizePixel = 0,
+		Position = UDim2.new(1, -10, 0, 6), Size = UDim2.fromOffset(118, 18), BorderSizePixel = 0,
 	})
 	bindTheme(self.library, holder, "BackgroundColor3", "Background2")
 	corner(holder, 4)
@@ -2520,18 +2584,18 @@ function Section:addSlider(data)
 
 	local module = createBoxedModule(self, 30)
 	local infoText = getInfoText(data)
-	local title = createBoxedTitle(self, module, options.title, infoText and 205 or 178)
-	createInfoHint(self, module, infoText, 164)
+	local title = createBoxedTitle(self, module, options.title, infoText and 180 or 150)
+	createInfoHint(self, module, infoText, 138)
 
 	local control = create("Frame", {
 		Parent = module, AnchorPoint = Vector2.new(1, 0.5),
 		Position = UDim2.new(1, infoText and -34 or -10, 0.5, 0),
-		Size = UDim2.fromOffset(155, 18), BackgroundTransparency = 1,
+		Size = UDim2.fromOffset(128, 18), BackgroundTransparency = 1,
 	})
 
 	local valueFrame = create("Frame", {
 		Parent = control, AnchorPoint = Vector2.new(1, 0.5),
-		Position = UDim2.new(1, 0, 0.5, 0), Size = UDim2.fromOffset(38, 18),
+		Position = UDim2.new(1, 0, 0.5, 0), Size = UDim2.fromOffset(36, 18),
 		BorderSizePixel = 0,
 	})
 	bindTheme(self.library, valueFrame, "BackgroundColor3", "Card2")
@@ -2547,7 +2611,7 @@ function Section:addSlider(data)
 	local bar = create("Frame", {
 		Parent = control, AnchorPoint = Vector2.new(0, 0.5),
 		Position = UDim2.new(0, 0, 0.5, 0),
-		Size = UDim2.new(1, -46, 0, 5), BorderSizePixel = 0,
+		Size = UDim2.new(1, -44, 0, 5), BorderSizePixel = 0,
 	})
 	bindTheme(self.library, bar, "BackgroundColor3", "Background2")
 	corner(bar, 5)
@@ -2648,7 +2712,7 @@ function Section:addKeybind(data)
 
 	local function resizeKeyBox()
 		local size = TextService:GetTextSize(keyBox.Text, 10, Enum.Font.GothamMedium, Vector2.new(math.huge, math.huge))
-		keyBox.Size = UDim2.fromOffset(math.clamp(size.X + 10, 34, 92), 18)
+		keyBox.Size = UDim2.fromOffset(math.clamp(size.X + 10, 34, 76), 18)
 	end
 	resizeKeyBox()
 
@@ -2717,13 +2781,13 @@ function Section:addDropdown(data)
 	module.ClipsDescendants = true
 
 	local infoText = getInfoText(data)
-	local title = createBoxedTitle(self, module, options.title, infoText and 190 or 158)
+	local title = createBoxedTitle(self, module, options.title, infoText and 176 or 145)
 	createInfoHint(self, module, infoText, 148)
 
 	local selectBox = create("TextButton", {
 		Parent = module, AnchorPoint = Vector2.new(1, 0.5),
 		Position = UDim2.new(1, infoText and -34 or -10, 0.5, 0),
-		Size = UDim2.fromOffset(125, 18), BorderSizePixel = 0,
+		Size = UDim2.fromOffset(112, 18), BorderSizePixel = 0,
 		AutoButtonColor = false, Text = "",
 	})
 	bindTheme(self.library, selectBox, "BackgroundColor3", "Card2")
@@ -2733,17 +2797,16 @@ function Section:addDropdown(data)
 
 	local selectedLabel = createLabel(self.library, selectBox, options.selected and tostring(options.selected) or "None", 11, Enum.Font.GothamMedium)
 	selectedLabel.Position = UDim2.fromOffset(5, 0)
-	selectedLabel.Size = UDim2.new(1, -25, 1, 0)
+	selectedLabel.Size = UDim2.new(1, -23, 1, 0)
 	selectedLabel.TextTransparency = 0.5
 	selectedLabel.TextTruncate = Enum.TextTruncate.AtEnd
 
-	local arrow = createLabel(self.library, selectBox, "chevron-small-down", 13, Enum.Font.GothamBold)
-	arrow.AnchorPoint = Vector2.new(1, 0.5)
-	arrow.Position = UDim2.new(1, -2, 0.5, 0)
-	arrow.Size = UDim2.fromOffset(18, 18)
-	arrow.TextXAlignment = Enum.TextXAlignment.Center
-	arrow.FontFace = NL_ICON_BOLD
-	arrow.TextTransparency = 0.25
+	local arrow = createLucideIcon(self.library, selectBox, "chevron-down", 13, {
+		AnchorPoint = Vector2.new(1, 0.5),
+		Position = UDim2.new(1, -5, 0.5, 0),
+		Size = UDim2.fromOffset(13, 13), ZIndex = 6,
+	}, "Muted")
+	arrow.ImageTransparency = 0.22
 
 	local search = create("TextBox", {
 		Parent = module, Position = UDim2.fromOffset(8, 34),
@@ -2772,7 +2835,7 @@ function Section:addDropdown(data)
 		opened = state == true
 		search.Visible = opened
 		list.Visible = opened
-		tween(arrow, 0.175, { Rotation = opened and 180 or 0, TextTransparency = opened and 0 or 0.25 })
+		tween(arrow, 0.175, { Rotation = opened and 180 or 0, ImageTransparency = opened and 0.05 or 0.22 })
 		tween(module, 0.175, { Size = UDim2.new(1, 0, 0, opened and 170 or 30) })
 	end
 
@@ -2876,13 +2939,13 @@ function Section:addMultiDropdown(data)
 	module.ClipsDescendants = true
 
 	local infoText = getInfoText(data)
-	local title = createBoxedTitle(self, module, options.title, infoText and 190 or 158)
+	local title = createBoxedTitle(self, module, options.title, infoText and 176 or 145)
 	createInfoHint(self, module, infoText, 148)
 
 	local selectBox = create("TextButton", {
 		Parent = module, AnchorPoint = Vector2.new(1, 0.5),
 		Position = UDim2.new(1, infoText and -34 or -10, 0.5, 0),
-		Size = UDim2.fromOffset(125, 18), BorderSizePixel = 0,
+		Size = UDim2.fromOffset(112, 18), BorderSizePixel = 0,
 		AutoButtonColor = false, Text = "",
 	})
 	bindTheme(self.library, selectBox, "BackgroundColor3", "Card2")
@@ -2892,16 +2955,16 @@ function Section:addMultiDropdown(data)
 
 	local selectedLabel = createLabel(self.library, selectBox, "", 11, Enum.Font.GothamMedium)
 	selectedLabel.Position = UDim2.fromOffset(5, 0)
-	selectedLabel.Size = UDim2.new(1, -25, 1, 0)
+	selectedLabel.Size = UDim2.new(1, -23, 1, 0)
 	selectedLabel.TextTransparency = 0.5
 	selectedLabel.TextTruncate = Enum.TextTruncate.AtEnd
 
-	local arrow = createLabel(self.library, selectBox, "chevron-small-down", 13, Enum.Font.GothamBold)
-	arrow.AnchorPoint = Vector2.new(1, 0.5)
-	arrow.Position = UDim2.new(1, -2, 0.5, 0)
-	arrow.Size = UDim2.fromOffset(18, 18)
-	arrow.TextXAlignment = Enum.TextXAlignment.Center
-	arrow.TextTransparency = 0.25
+	local arrow = createLucideIcon(self.library, selectBox, "chevron-down", 13, {
+		AnchorPoint = Vector2.new(1, 0.5),
+		Position = UDim2.new(1, -5, 0.5, 0),
+		Size = UDim2.fromOffset(13, 13), ZIndex = 6,
+	}, "Muted")
+	arrow.ImageTransparency = 0.22
 
 	local search = create("TextBox", {
 		Parent = module, Position = UDim2.fromOffset(8, 34),
@@ -2948,7 +3011,7 @@ function Section:addMultiDropdown(data)
 		opened = state == true
 		search.Visible = opened
 		list.Visible = opened
-		tween(arrow, 0.175, { Rotation = opened and 180 or 0, TextTransparency = opened and 0 or 0.25 })
+		tween(arrow, 0.175, { Rotation = opened and 180 or 0, ImageTransparency = opened and 0.05 or 0.22 })
 		tween(module, 0.175, { Size = UDim2.new(1, 0, 0, opened and 178 or 30) })
 	end
 
@@ -3110,10 +3173,10 @@ function Section:addColorPicker(data)
 	local preview = create("Frame", {
 		Parent = header, AnchorPoint = Vector2.new(1, 0.5),
 		Position = UDim2.new(1, infoText and -32 or -12, 0.5, 0),
-		Size = UDim2.fromOffset(24, 24), BorderSizePixel = 0,
+		Size = UDim2.fromOffset(20, 20), BorderSizePixel = 0,
 		BackgroundColor3 = options.color3, BackgroundTransparency = options.transparency,
 	})
-	corner(preview, 6)
+	corner(preview, 5)
 	local previewStroke = stroke(preview, self.library.theme.Stroke, 0.25, 1)
 	bindTheme(self.library, previewStroke, "Color", "Stroke")
 
