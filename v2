@@ -3361,19 +3361,12 @@ function NeverLose:CreateIndicator()
     api.Root=root; return api
 end
 
-
--- ────────────────────────────────────────────────────────────────
--- NeverLose Unload
--- ────────────────────────────────────────────────────────────────
 function NeverLose:Unload()
     if not NeverLose.UnloadEnabled then return end
     NeverLose.ScreenGui:Destroy()
     for _,v in next, NeverLose.GlobalSignals do pcall(v.Disconnect,v) end
 end
 
--- ────────────────────────────────────────────────────────────────
--- Public surface
--- ────────────────────────────────────────────────────────────────
 Library.NeverLose = NeverLose   -- expose NL helpers if user needs them
 
 return Library
