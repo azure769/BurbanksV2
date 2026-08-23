@@ -384,7 +384,7 @@ local THEME_PRESETS = {
 	},
 }
 
-local TEXT_SCALE = 1.30
+local TEXT_SCALE = 1.00
 
 local function copyTable(source)
 	local result = {}
@@ -575,19 +575,19 @@ local function createBoxedModule(section, height)
 	-- Neverlose-style row separator; preserves the same module/controller API.
 	local rowLine = create("Frame", {
 		Parent = holder, AnchorPoint = Vector2.new(0.5, 1),
-		Position = UDim2.new(0.5, 0, 1, 0), Size = UDim2.new(1, -24, 0, 1), BorderSizePixel = 0,
+		Position = UDim2.new(0.5, 0, 1, 0), Size = UDim2.new(1, -20, 0, 1), BorderSizePixel = 0,
 	})
 	bindTheme(section.library, rowLine, "BackgroundColor3", "Stroke")
-	rowLine.BackgroundTransparency = 0.86
+	rowLine.BackgroundTransparency = 1
 	return holder
 end
 
 local function createBoxedTitle(section, parent, title, rightPadding)
 	local label = createLabel(section.library, parent, tostring(title or "Module"), 13, Enum.Font.GothamMedium)
-	label.Position = UDim2.fromOffset(12, 0)
+	label.Position = UDim2.fromOffset(11, 0)
 	label.Size = UDim2.new(1, -(rightPadding or 24), 1, 0)
 	bindTheme(section.library, label, "TextColor3", "Text")
-	label.TextTransparency = 0.2
+	label.TextTransparency = 0.20
 	return label
 end
 
@@ -1015,7 +1015,7 @@ function Library.new(data)
 	local main = create("Frame", {
 		Name = "Main", Parent = screenGui,
 		AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5),
-		Size = UDim2.fromOffset(800, 520), BorderSizePixel = 0, ClipsDescendants = true,
+		Size = UDim2.fromOffset(800, 600), BorderSizePixel = 0, ClipsDescendants = true,
 		Visible = not self.startupMenu and not self.keyEnabled,
 	})
 	bindTheme(self, main, "BackgroundColor3", "Background")
@@ -1031,12 +1031,12 @@ function Library.new(data)
 		ScaleType = Enum.ScaleType.Crop, Visible = self.backgroundImageValue ~= "", ZIndex = 0,
 	})
 
-	local mainStroke = stroke(main, self.theme.Stroke, 0.65, 1)
+	local mainStroke = stroke(main, self.theme.Stroke, 1, 1)
 	bindTheme(self, mainStroke, "Color", "Stroke")
 
 	local topbar = create("Frame", {
 		Name = "Topbar", Parent = main,
-		Size = UDim2.new(0, 190, 0, 50), BorderSizePixel = 0,
+		Size = UDim2.new(0, 175, 0, 50), BorderSizePixel = 0,
 	})
 	bindTheme(self, topbar, "BackgroundColor3", "Topbar")
 	topbar.BackgroundTransparency = 1
@@ -1081,6 +1081,138 @@ function Library.new(data)
 	bindTheme(self, subtitleLabel, "TextColor3", "Muted")
 	subtitleLabel.TextTransparency = 0.65
 
+	-- Neverlose-style top-right live status strip. This is visual-only and does not alter the public API.
+	local liveStatus = create("Frame", {
+		Name = "LiveStatus", Parent = main,
+		AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -10, 0, 8),
+		Size = UDim2.fromOffset(154, 32), BorderSizePixel = 0, ZIndex = 12,
+	})
+	bindTheme(self, liveStatus, "BackgroundColor3", "Card")
+	liveStatus.BackgroundTransparency = 0.72
+	corner(liveStatus, 7)
+	local liveStatusStroke = stroke(liveStatus, self.theme.Stroke, 0.65, 1)
+	bindTheme(self, liveStatusStroke, "Color", "Stroke")
+
+	local pingDot = create("Frame", {
+		Parent = liveStatus, Position = UDim2.fromOffset(10, 12),
+		Size = UDim2.fromOffset(7, 7), BorderSizePixel = 0, ZIndex = 13,
+	})
+	bindTheme(self, pingDot, "BackgroundColor3", "Accent")
+	corner(pingDot, 7)
+
+	local pingText = createLabel(self, liveStatus, "PING  -- ms", 11, Enum.Font.GothamMedium)
+	pingText.Position = UDim2.fromOffset(23, 0)
+	pingText.Size = UDim2.fromOffset(67, 32)
+	pingText.ZIndex = 13
+	bindTheme(self, pingText, "TextColor3", "Text")
+
+	local statusDivider = create("Frame", {
+		Parent = liveStatus, Position = UDim2.fromOffset(93, 8),
+		Size = UDim2.fromOffset(1, 16), BorderSizePixel = 0, ZIndex = 13,
+	})
+	bindTheme(self, statusDivider, "BackgroundColor3", "Stroke")
+	statusDivider.BackgroundTransparency = 0.45
+
+	local fpsText = createLabel(self, liveStatus, "FPS --", 11, Enum.Font.GothamMedium)
+	fpsText.Position = UDim2.fromOffset(103, 0)
+	fpsText.Size = UDim2.fromOffset(45, 32)
+	fpsText.ZIndex = 13
+	bindTheme(self, fpsText, "TextColor3", "Muted")
+	fpsText.TextTransparency = 0.18
+
+	-- Update the readout locally. GetNetworkPing returns seconds, so convert to milliseconds.
+	do
+		local frames, elapsed = 0, 0
+		RunService.RenderStepped:Connect(function(dt)
+			frames += 1
+			elapsed += dt
+			if elapsed >= 0.5 then
+				local fps = math.floor((frames / elapsed) + 0.5)
+				local ping = 0
+				pcall(function() ping = math.floor((LocalPlayer:GetNetworkPing() * 1000) + 0.5) end)
+				pingText.Text = string.format("PING  %d ms", ping)
+				fpsText.Text = string.format("FPS %d", fps)
+				frames, elapsed = 0, 0
+			end
+		end)
+	end
+
+
+	-- Neverlose-style expanding search control in the right header.
+	local searchFrame = create("Frame", {
+		Name = "SearchFrame", Parent = main,
+		AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -174, 0, 9),
+		Size = UDim2.fromOffset(30, 30), BorderSizePixel = 0, ZIndex = 14,
+		ClipsDescendants = true,
+	})
+	bindTheme(self, searchFrame, "BackgroundColor3", "Card")
+	searchFrame.BackgroundTransparency = 0.78
+	corner(searchFrame, 7)
+	local searchStroke = stroke(searchFrame, self.theme.Stroke, 0.65, 1)
+	bindTheme(self, searchStroke, "Color", "Stroke")
+
+	local searchIcon = createLabel(self, searchFrame, "⌕", 18, Enum.Font.GothamBold)
+	searchIcon.Position = UDim2.fromOffset(0, 0)
+	searchIcon.Size = UDim2.fromOffset(30, 30)
+	searchIcon.TextXAlignment = Enum.TextXAlignment.Center
+	searchIcon.ZIndex = 15
+	bindTheme(self, searchIcon, "TextColor3", "Muted")
+	searchIcon.TextTransparency = 0.25
+
+	local searchBox = create("TextBox", {
+		Name = "SearchBox", Parent = searchFrame,
+		Position = UDim2.fromOffset(34, 0), Size = UDim2.new(1, -40, 1, 0),
+		BackgroundTransparency = 1, BorderSizePixel = 0,
+		ClearTextOnFocus = false, Text = "", PlaceholderText = "Search",
+		Font = Enum.Font.GothamMedium, TextSize = 13,
+		TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 15,
+	})
+	bindTheme(self, searchBox, "TextColor3", "Text")
+	bindTheme(self, searchBox, "PlaceholderColor3", "Muted")
+
+	local searchButton = create("TextButton", {
+		Parent = searchFrame, Size = UDim2.fromScale(1, 1),
+		BackgroundTransparency = 1, Text = "", AutoButtonColor = false, ZIndex = 16,
+	})
+	local searchOpen = false
+	local function setSearchOpen(state)
+		searchOpen = state
+		tween(searchFrame, 0.22, { Size = state and UDim2.fromOffset(220, 30) or UDim2.fromOffset(30, 30) })
+		searchButton.Size = state and UDim2.fromOffset(30, 30) or UDim2.fromScale(1, 1)
+		if state then
+			task.defer(function() searchBox:CaptureFocus() end)
+		else
+			searchBox.Text = ""
+			searchBox:ReleaseFocus()
+		end
+	end
+	searchButton.MouseButton1Click:Connect(function() setSearchOpen(not searchOpen) end)
+
+	local function applySearchFilter(query)
+		query = string.lower(tostring(query or ""))
+		local page = self.focusedPage
+		if not page or not page.sections then return end
+		for _, section in ipairs(page.sections) do
+			local sectionMatch = query == "" or string.find(string.lower(section.title or ""), query, 1, true) ~= nil
+			local anyVisible = false
+			for _, child in ipairs(section.moduleContainer:GetChildren()) do
+				if child:IsA("GuiObject") then
+					local hay = ""
+					for _, d in ipairs(child:GetDescendants()) do
+						if (d:IsA("TextLabel") or d:IsA("TextButton") or d:IsA("TextBox")) and d.Text then
+							hay ..= " " .. string.lower(d.Text)
+						end
+					end
+					local show = query == "" or sectionMatch or string.find(hay, query, 1, true) ~= nil
+					child.Visible = show
+					anyVisible = anyVisible or show
+				end
+			end
+			section.container.Visible = query == "" or sectionMatch or anyVisible
+		end
+	end
+	searchBox:GetPropertyChangedSignal("Text"):Connect(function() applySearchFilter(searchBox.Text) end)
+
 	local status = create("Frame", {
 		Parent = topbar, AnchorPoint = Vector2.new(1, 0.5),
 		Position = UDim2.new(1, -14, 0.5, 0), Size = UDim2.fromOffset(86, 26), BorderSizePixel = 0,
@@ -1118,14 +1250,14 @@ function Library.new(data)
 
 	local sidebar = create("Frame", {
 		Name = "Sidebar", Parent = main,
-		Position = UDim2.fromOffset(0, 50), Size = UDim2.new(0, 190, 1, -50), BorderSizePixel = 0,
+		Position = UDim2.fromOffset(0, 50), Size = UDim2.new(0, 175, 1, -50), BorderSizePixel = 0,
 	})
 	bindTheme(self, sidebar, "BackgroundColor3", "Sidebar")
 	sidebar.BackgroundTransparency = 1
 
 	local sideBorder = create("Frame", {
-		Parent = sidebar, AnchorPoint = Vector2.new(1, 0.5),
-		Position = UDim2.new(1, 0, 0.5, 0), Size = UDim2.new(0, 1, 0.72, 0), BorderSizePixel = 0,
+		Parent = sidebar, AnchorPoint = Vector2.new(1, 0),
+		Position = UDim2.new(1, 0, 0, 0), Size = UDim2.new(0, 1, 1, 0), BorderSizePixel = 0,
 	})
 	bindTheme(self, sideBorder, "BackgroundColor3", "Stroke")
 	sideBorder.BackgroundTransparency = 0.5
@@ -1149,12 +1281,12 @@ function Library.new(data)
 
 	local pageButtons = create("ScrollingFrame", {
 		Parent = sidebar, Position = UDim2.fromOffset(5, 10),
-		Size = UDim2.new(1, -10, 1, -70), BackgroundTransparency = 1,
+		Size = UDim2.new(1, -10, 1, -60), BackgroundTransparency = 1,
 		BorderSizePixel = 0, CanvasSize = UDim2.new(), ScrollBarThickness = 0,
 	})
 	bindTheme(self, pageButtons, "ScrollBarImageColor3", "Accent")
 	local pageLayout = create("UIListLayout", {
-		Parent = pageButtons, SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 5),
+		Parent = pageButtons, SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 3),
 	})
 	refreshCanvas(pageButtons, pageLayout, 10)
 
@@ -1194,28 +1326,121 @@ function Library.new(data)
 	usernameLabel.Size = UDim2.new(1, -62, 0, 25)
 	usernameLabel.TextTruncate = Enum.TextTruncate.AtEnd
 
-	local displayNameLabel = createLabel(self, playerProfile, LocalPlayer.Name, 12, Enum.Font.GothamMedium)
+	local displayNameLabel = createLabel(self, playerProfile, LocalPlayer.Name, 10, Enum.Font.GothamBold)
 	displayNameLabel.Position = UDim2.fromOffset(55, 25)
 	displayNameLabel.Size = UDim2.new(1, -62, 0, 15)
 	displayNameLabel.TextTruncate = Enum.TextTruncate.AtEnd
 	bindTheme(self, displayNameLabel, "TextColor3", "Muted")
 	displayNameLabel.TextTransparency = 0.65
 
+
+	local profileArrow = createLabel(self, playerProfile, ">", 13, Enum.Font.GothamBold)
+	profileArrow.AnchorPoint = Vector2.new(1, 0.5)
+	profileArrow.Position = UDim2.new(1, -8, 0.5, 0)
+	profileArrow.Size = UDim2.fromOffset(18, 24)
+	profileArrow.TextXAlignment = Enum.TextXAlignment.Center
+	bindTheme(self, profileArrow, "TextColor3", "Muted")
+	profileArrow.TextTransparency = 0.5
+
+	local profileButton = create("TextButton", {
+		Parent = playerProfile, Size = UDim2.fromScale(1, 1),
+		BackgroundTransparency = 1, Text = "", AutoButtonColor = false, ZIndex = 25,
+	})
+
+	-- Neverlose-style floating account / UI mode popup.
+	local profilePopup = create("Frame", {
+		Name = "ProfilePopup", Parent = screen,
+		Size = UDim2.fromOffset(220, 168), BorderSizePixel = 0,
+		Visible = false, ClipsDescendants = true, ZIndex = 100,
+	})
+	bindTheme(self, profilePopup, "BackgroundColor3", "Card")
+	profilePopup.BackgroundTransparency = 0.035
+	corner(profilePopup, 10)
+	local profilePopupStroke = stroke(profilePopup, self.theme.Stroke, 0.65, 1)
+	bindTheme(self, profilePopupStroke, "Color", "Stroke")
+
+	local popupAccount = create("Frame", {
+		Parent = profilePopup, Position = UDim2.fromOffset(8, 8),
+		Size = UDim2.new(1, -16, 0, 58), BackgroundTransparency = 1,
+		BorderSizePixel = 0, ZIndex = 101,
+	})
+	local popupAvatar = create("ImageLabel", {
+		Parent = popupAccount, Position = UDim2.fromOffset(2, 8), Size = UDim2.fromOffset(42, 42),
+		BackgroundTransparency = 1, Image = "", ScaleType = Enum.ScaleType.Crop, ZIndex = 102,
+	})
+	corner(popupAvatar, 21)
+	local popupName = createLabel(self, popupAccount, LocalPlayer.DisplayName, 13, Enum.Font.GothamMedium)
+	popupName.Position = UDim2.fromOffset(55, 10); popupName.Size = UDim2.new(1, -60, 0, 18); popupName.ZIndex = 102
+	local popupStatus = createLabel(self, popupAccount, LocalPlayer.Name, 12, Enum.Font.GothamMedium)
+	popupStatus.Position = UDim2.fromOffset(55, 29); popupStatus.Size = UDim2.new(1, -60, 0, 18); popupStatus.ZIndex = 102
+	bindTheme(self, popupStatus, "TextColor3", "Muted"); popupStatus.TextTransparency = 0.35
+
+	local popupLine = create("Frame", { Parent = profilePopup, Position = UDim2.fromOffset(8, 69), Size = UDim2.new(1, -16, 0, 1), BorderSizePixel = 0, ZIndex = 102 })
+	bindTheme(self, popupLine, "BackgroundColor3", "Stroke"); popupLine.BackgroundTransparency = 0.65
+	local modeTitle = createLabel(self, profilePopup, "UI MODE", 10, Enum.Font.GothamBold)
+	modeTitle.Position = UDim2.fromOffset(12, 77); modeTitle.Size = UDim2.new(1, -24, 0, 16); modeTitle.ZIndex = 102
+	bindTheme(self, modeTitle, "TextColor3", "Muted"); modeTitle.TextTransparency = 0.5
+
+	local modes = { {"Default", 1.0}, {"Compact", 0.90}, {"Large", 1.10} }
+	for i, item in ipairs(modes) do
+		local b = create("TextButton", {
+			Parent = profilePopup, Position = UDim2.fromOffset(10 + (i-1)*68, 101), Size = UDim2.fromOffset(62, 28),
+			BorderSizePixel = 0, Text = item[1], Font = Enum.Font.GothamMedium, TextSize = 11,
+			AutoButtonColor = false, ZIndex = 103,
+		})
+		bindTheme(self, b, "BackgroundColor3", "Background2"); b.BackgroundTransparency = 0.25
+		bindTheme(self, b, "TextColor3", "Text"); corner(b, 6)
+		local bs = stroke(b, self.theme.Stroke, 0.65, 1); bindTheme(self, bs, "Color", "Stroke")
+		b.MouseButton1Click:Connect(function()
+			startupScale.Scale = item[2]
+			self.uiScale = item[2]
+		end)
+	end
+
+	local themeHint = createLabel(self, profilePopup, "Themes & existing API remain unchanged", 10, Enum.Font.GothamMedium)
+	themeHint.Position = UDim2.fromOffset(12, 137); themeHint.Size = UDim2.new(1, -24, 0, 18); themeHint.ZIndex = 102
+	bindTheme(self, themeHint, "TextColor3", "Muted"); themeHint.TextTransparency = 0.5
+
+	local popupOpen = false
+	local function updateProfilePopupPosition()
+		local ap, as = playerProfile.AbsolutePosition, playerProfile.AbsoluteSize
+		profilePopup.Position = UDim2.fromOffset(ap.X + as.X + 8, ap.Y + as.Y - profilePopup.AbsoluteSize.Y)
+	end
+	local function setProfilePopup(state)
+		popupOpen = state
+		profilePopup.Visible = state
+		profileArrow.Text = state and "<" or ">"
+		if state then updateProfilePopupPosition() end
+	end
+	profileButton.MouseButton1Click:Connect(function() setProfilePopup(not popupOpen) end)
+	RunService.RenderStepped:Connect(function() if popupOpen then updateProfilePopupPosition() end end)
+	UserInputService.InputBegan:Connect(function(input)
+		if not popupOpen then return end
+		if input.UserInputType ~= Enum.UserInputType.MouseButton1 and input.UserInputType ~= Enum.UserInputType.Touch then return end
+		task.defer(function()
+			local pos = UserInputService:GetMouseLocation()
+			local function inside(gui)
+				local p, z = gui.AbsolutePosition, gui.AbsoluteSize
+				return pos.X >= p.X and pos.X <= p.X + z.X and pos.Y >= p.Y and pos.Y <= p.Y + z.Y
+			end
+			if not inside(profilePopup) and not inside(playerProfile) then setProfilePopup(false) end
+		end)
+	end)
+
 	task.spawn(function()
 		local success, thumbnail = pcall(function()
 			return Players:GetUserThumbnailAsync(LocalPlayer.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size150x150)
 		end)
-		if success and avatar.Parent then avatar.Image = thumbnail end
+		if success and avatar.Parent then avatar.Image = thumbnail; popupAvatar.Image = thumbnail end
 	end)
 
 	local content = create("Frame", {
 		Name = "Content", Parent = main,
-		Position = UDim2.fromOffset(191, 0), Size = UDim2.new(1, -191, 1, 0),
+		Position = UDim2.fromOffset(176, 0), Size = UDim2.new(1, -176, 1, 0),
 		BorderSizePixel = 0, ClipsDescendants = true,
 	})
 	bindTheme(self, content, "BackgroundColor3", "Background")
 	content.BackgroundTransparency = 0.60
-	corner(content, 13)
 	local contentStroke = stroke(content, self.theme.Stroke, 0.65, 1)
 	bindTheme(self, contentStroke, "Color", "Stroke")
 
@@ -1495,7 +1720,7 @@ function Library:_applyResponsiveLayout()
 		self.openPosition = self.main.Position
 		self:SetSidebarCollapsed(true)
 	else
-		self.main.Size = UDim2.fromOffset(800, 520)
+		self.main.Size = UDim2.fromOffset(800, 600)
 		self.main.Position = UDim2.fromScale(0.5, 0.5)
 		self.openSize = self.main.Size
 		self.openPosition = self.main.Position
@@ -1781,7 +2006,7 @@ function Library:addPage(data)
 			local imageUrl = tonumber(iconValue) and ("rbxassetid://" .. iconValue) or iconValue
 			icon = create("ImageLabel", {
 				Parent = background, BackgroundTransparency = 1,
-				Position = UDim2.fromOffset(7, 3), Size = UDim2.fromOffset(25, 25),
+				Position = UDim2.fromOffset(2, 3), Size = UDim2.fromOffset(25, 25),
 				Image = imageUrl, ScaleType = Enum.ScaleType.Fit,
 			})
 			bindTheme(self, icon, "ImageColor3", "Muted")
@@ -1791,7 +2016,7 @@ function Library:addPage(data)
 				local success, lucideIcon = pcall(function()
 					return lucide.ImageLabel(string.lower(iconValue), 48, {
 						Parent = background, BackgroundTransparency = 1,
-						Position = UDim2.fromOffset(7, 3), Size = UDim2.fromOffset(25, 25),
+						Position = UDim2.fromOffset(2, 3), Size = UDim2.fromOffset(25, 25),
 						ScaleType = Enum.ScaleType.Fit,
 					})
 				end)
@@ -1807,42 +2032,42 @@ function Library:addPage(data)
 
 	if not icon then
 		icon = createLabel(self, background, fallbackIconText, 12, Enum.Font.GothamBold)
-		icon.Position = UDim2.fromOffset(7, 0)
+		icon.Position = UDim2.fromOffset(2, 0)
 		icon.Size = UDim2.fromOffset(25, 30)
 		icon.TextXAlignment = Enum.TextXAlignment.Center
 		bindTheme(self, icon, "TextColor3", "Muted")
 	end
 
-	local title = createLabel(self, background, page.title, 13, Enum.Font.GothamMedium)
-	title.Position = UDim2.fromOffset(42, 0)
-	title.Size = UDim2.new(1, -49, 1, 0)
+	local title = createLabel(self, background, page.title, 12, Enum.Font.GothamMedium)
+	title.Position = UDim2.fromOffset(30, 0)
+	title.Size = UDim2.new(1, -37, 1, 0)
 	bindTheme(self, title, "TextColor3", "Muted")
 	title.TextTransparency = 0.35
 
 	local pageContainer = create("Frame", {
 		Name = "PageContainer", Parent = self.content,
-		Position = UDim2.fromOffset(5, 55), Size = UDim2.new(1, -10, 1, -60),
+		Position = UDim2.fromOffset(0, 50), Size = UDim2.new(1, 0, 1, -50),
 		BackgroundTransparency = 1, Visible = false,
 	})
 
 	local leftColumn = create("ScrollingFrame", {
 		Name = "LeftColumn", Parent = pageContainer,
-		Size = UDim2.new(0.5, -6, 1, 0), BackgroundTransparency = 1,
+		Size = UDim2.new(0.5, 0, 1, -5), BackgroundTransparency = 1,
 		BorderSizePixel = 0, CanvasSize = UDim2.new(), ScrollBarThickness = 0,
 	})
 	bindTheme(self, leftColumn, "ScrollBarImageColor3", "Accent")
-	local leftLayout = create("UIListLayout", { Parent = leftColumn, SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 12) })
-	padding(leftColumn, 3, 3, 2, 10)
+	local leftLayout = create("UIListLayout", { Parent = leftColumn, SortOrder = Enum.SortOrder.LayoutOrder, HorizontalAlignment = Enum.HorizontalAlignment.Right, Padding = UDim.new(0, 5) })
+	padding(leftColumn, 0, 0, 0, 0)
 	refreshCanvas(leftColumn, leftLayout, 12)
 
 	local rightColumn = create("ScrollingFrame", {
 		Name = "RightColumn", Parent = pageContainer,
-		Position = UDim2.new(0.5, 6, 0, 0), Size = UDim2.new(0.5, -6, 1, 0),
+		Position = UDim2.new(0.5, 0, 0, 0), Size = UDim2.new(0.5, 0, 1, -5),
 		BackgroundTransparency = 1, BorderSizePixel = 0, CanvasSize = UDim2.new(), ScrollBarThickness = 0,
 	})
 	bindTheme(self, rightColumn, "ScrollBarImageColor3", "Accent")
-	local rightLayout = create("UIListLayout", { Parent = rightColumn, SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 12) })
-	padding(rightColumn, 3, 3, 2, 10)
+	local rightLayout = create("UIListLayout", { Parent = rightColumn, SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 5) })
+	padding(rightColumn, 0, 0, 0, 0)
 	refreshCanvas(rightColumn, rightLayout, 12)
 
 	local fullColumn = create("ScrollingFrame", {
@@ -1852,8 +2077,8 @@ function Library:addPage(data)
 		ScrollBarThickness = 0, Visible = false,
 	})
 	bindTheme(self, fullColumn, "ScrollBarImageColor3", "Accent")
-	local fullLayout = create("UIListLayout", { Parent = fullColumn, SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 12) })
-	padding(fullColumn, 3, 3, 2, 10)
+	local fullLayout = create("UIListLayout", { Parent = fullColumn, SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 5) })
+	padding(fullColumn, 0, 0, 0, 0)
 	refreshCanvas(fullColumn, fullLayout, 12)
 
 	page._columns = { left = leftColumn, right = rightColumn, full = fullColumn }
@@ -1958,7 +2183,7 @@ function Page:addSection(data)
 	-- One transparent holder keeps the title and card together in the column layout.
 	local sectionHolder = create("Frame", {
 		Parent = columnContainer,
-		Size = UDim2.new(1, -4, 0, 0),
+		Size = UDim2.new(1, -5, 0, 0),
 		AutomaticSize = Enum.AutomaticSize.Y,
 		BackgroundTransparency = 1,
 		BorderSizePixel = 0,
@@ -1966,40 +2191,42 @@ function Page:addSection(data)
 	})
 
 	-- Section title is OUTSIDE the card and sits at the very top.
-	local title = createLabel(self.library, sectionHolder, section.title, 13, Enum.Font.GothamBold)
-	title.Position = UDim2.fromOffset(8, 0)
-	title.Size = UDim2.new(1, -16, 0, 18)
+	local title = createLabel(self.library, sectionHolder, section.title, 11, Enum.Font.GothamMedium)
+	title.AnchorPoint = Vector2.new(0.5, 0)
+	title.Position = UDim2.new(0.5, 0, 0, 0)
+	title.Size = UDim2.new(1, -35, 0, 15)
 	bindTheme(self.library, title, "TextColor3", "Muted")
 	title.TextTransparency = 0.5
 
 	-- Card begins below the title. No divider line.
 	local card = create("Frame", {
 		Parent = sectionHolder,
-		Position = UDim2.fromOffset(0, 24),
-		Size = UDim2.new(1, 0, 0, 10),
+		AnchorPoint = Vector2.new(0.5, 0),
+		Position = UDim2.new(0.5, 0, 0, 20),
+		Size = UDim2.new(1, -10, 0, 10),
 		AutomaticSize = Enum.AutomaticSize.Y,
 		BorderSizePixel = 0,
 		ClipsDescendants = false,
 	})
 	bindTheme(self.library, card, "BackgroundColor3", "Card")
-	card.BackgroundTransparency = 0.42
-	corner(card, 9)
-	local cardStroke = stroke(card, self.library.theme.Stroke, 0.72, 1)
+	card.BackgroundTransparency = 0.50
+	corner(card, 10)
+	local cardStroke = stroke(card, self.library.theme.Stroke, 0.65, 1)
 	bindTheme(self.library, cardStroke, "Color", "Stroke")
 
 	local moduleContainer = create("Frame", {
 		Parent = card,
-		Position = UDim2.fromOffset(8, 8),
-		Size = UDim2.new(1, -16, 0, 0),
+		Position = UDim2.fromOffset(0, 0),
+		Size = UDim2.new(1, 0, 0, 0),
 		AutomaticSize = Enum.AutomaticSize.Y,
 		BackgroundTransparency = 1,
 	})
 	create("UIListLayout", {
 		Parent = moduleContainer,
 		SortOrder = Enum.SortOrder.LayoutOrder,
-		Padding = UDim.new(0, 4),
+		Padding = UDim.new(0, 0),
 	})
-	padding(moduleContainer, 0, 0, 0, 8)
+	padding(moduleContainer, 0, 0, 0, 0)
 
 	section.container = sectionHolder
 	section.card = card
