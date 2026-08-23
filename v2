@@ -1341,7 +1341,7 @@ function Library.new(data)
 	local content = create("Frame", {
 		Name = "RightMenuFrame", Parent = main,
 		Position = UDim2.new(0, 176, 0, 0), Size = UDim2.new(1, -176, 1, 0),
-		BorderSizePixel = 0, ClipsDescendants = true, ZIndex = 8,
+		BorderSizePixel = 0, ClipsDescendants = true, ZIndex = 10,
 	})
 	bindTheme(self, content, "BackgroundColor3", "Background")
 	content.BackgroundTransparency = 0.60
@@ -1352,7 +1352,21 @@ function Library.new(data)
 	local contentHeader = create("Frame", {
 		Name = "RightHeader", Parent = content,
 		Size = UDim2.new(1, 0, 0, 50), BackgroundTransparency = 1,
-		BorderSizePixel = 0, ZIndex = 9,
+		BorderSizePixel = 0, ZIndex = 30,
+	})
+
+
+	-- Dedicated page viewport.
+	-- All cards/options are constrained to this frame so they can never
+	-- render underneath the sidebar or header.
+	local pagesHost = create("Frame", {
+		Name = "PagesViewport", Parent = content,
+		Position = UDim2.fromOffset(8, 54),
+		Size = UDim2.new(1, -16, 1, -62),
+		BackgroundTransparency = 1,
+		BorderSizePixel = 0,
+		ClipsDescendants = true,
+		ZIndex = 20,
 	})
 
 	local rightHeaderLine = create("Frame", {
@@ -1526,6 +1540,7 @@ function Library.new(data)
 	self.pagesContainer = pageButtons
 	self.content = content
 	self.contentHeader = contentHeader
+	self.pagesHost = pagesHost
 	self.sidebar = sidebar
 	self.sidebarCollapseButton = sidebarCollapse
 	self.sidebarCollapseIcon = sidebarCollapseIcon
@@ -1766,9 +1781,9 @@ function Library:_applyPageLayout(page, mobile)
 		right.Size = UDim2.new(1, 0, 0.5, -4)
 	else
 		left.Position = UDim2.fromOffset(0, 0)
-		left.Size = UDim2.new(0.5, 0, 1, -5)
-		right.Position = UDim2.new(0.5, 0, 0, 0)
-		right.Size = UDim2.new(0.5, 0, 1, -5)
+		left.Size = UDim2.new(0.5, -4, 1, 0)
+		right.Position = UDim2.new(0.5, 4, 0, 0)
+		right.Size = UDim2.new(0.5, -4, 1, 0)
 	end
 end
 
@@ -2165,9 +2180,10 @@ function Library:addPage(data)
 	title.TextTruncate = Enum.TextTruncate.AtEnd
 
 	local pageContainer = create("Frame", {
-		Name = "TabFrame", Parent = self.content,
-		Position = UDim2.new(0, 0, 0, 50), Size = UDim2.new(1, 0, 1, -50),
-		BackgroundTransparency = 1, Visible = false, ClipsDescendants = true, ZIndex = 5,
+		Name = "TabFrame", Parent = self.pagesHost or self.content,
+		Position = UDim2.fromOffset(0, 0), Size = UDim2.fromScale(1, 1),
+		BackgroundTransparency = 1, Visible = false,
+		ClipsDescendants = true, ZIndex = 21,
 	})
 
 	local leftColumn = create("ScrollingFrame", {
@@ -2175,7 +2191,7 @@ function Library:addPage(data)
 		AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.25, 0, 0.5, 0),
 		Size = UDim2.new(0.5, 0, 1, -5), BackgroundTransparency = 1,
 		BorderSizePixel = 0, CanvasSize = UDim2.new(), ScrollBarThickness = 0,
-		ClipsDescendants = false,
+		ClipsDescendants = true, ZIndex = 22,
 	})
 	local leftLayout = create("UIListLayout", {
 		Parent = leftColumn, HorizontalAlignment = Enum.HorizontalAlignment.Right,
@@ -2188,7 +2204,7 @@ function Library:addPage(data)
 		AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.75, 0, 0.5, 0),
 		Size = UDim2.new(0.5, 0, 1, -5), BackgroundTransparency = 1,
 		BorderSizePixel = 0, CanvasSize = UDim2.new(), ScrollBarThickness = 0,
-		ClipsDescendants = false,
+		ClipsDescendants = true, ZIndex = 22,
 	})
 	local rightLayout = create("UIListLayout", {
 		Parent = rightColumn, SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 5),
@@ -2200,7 +2216,7 @@ function Library:addPage(data)
 		AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0.5, 0),
 		Size = UDim2.new(1, 0, 1, -5), BackgroundTransparency = 1,
 		BorderSizePixel = 0, CanvasSize = UDim2.new(), ScrollBarThickness = 0,
-		ClipsDescendants = false, Visible = false,
+		ClipsDescendants = true, Visible = false, ZIndex = 22,
 	})
 	local fullLayout = create("UIListLayout", {
 		Parent = fullColumn, HorizontalAlignment = Enum.HorizontalAlignment.Center,
@@ -2317,8 +2333,8 @@ function Page:addSection(data)
 	local card = create("Frame", {
 		Name = "SectionFrame", Parent = columnContainer,
 		Size = UDim2.new(1, -5, 0, 20), AutomaticSize = Enum.AutomaticSize.Y,
-		BackgroundTransparency = 1, BorderSizePixel = 0, ClipsDescendants = false,
-		ZIndex = 9,
+		BackgroundTransparency = 1, BorderSizePixel = 0, ClipsDescendants = true,
+		ZIndex = 23,
 	})
 
 	local title = createLabel(self.library, card, section.title, 10, Enum.Font.GothamBold)
@@ -2332,7 +2348,7 @@ function Page:addSection(data)
 		Name = "SectionHandler", Parent = card,
 		AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 20),
 		Size = UDim2.new(1, -10, 0, 0), AutomaticSize = Enum.AutomaticSize.Y,
-		BorderSizePixel = 0, ClipsDescendants = false, ZIndex = 9,
+		BorderSizePixel = 0, ClipsDescendants = true, ZIndex = 24,
 	})
 	bindTheme(self.library, sectionHandler, "BackgroundColor3", "Card")
 	sectionHandler.BackgroundTransparency = 0.68
@@ -2343,6 +2359,7 @@ function Page:addSection(data)
 	local moduleContainer = create("Frame", {
 		Parent = sectionHandler, Size = UDim2.new(1, 0, 0, 0),
 		AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1,
+		ClipsDescendants = true,
 	})
 	create("UIPadding", {
 		Parent = moduleContainer,
