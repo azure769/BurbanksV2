@@ -823,9 +823,9 @@ function Library.new(data)
 		ClipsDescendants = true, ZIndex = 160,
 	})
 	bindTheme(self, pingFrame, "BackgroundColor3", "Background")
-	pingFrame.BackgroundTransparency = 0.20
+	pingFrame.BackgroundTransparency = 0.72
 	corner(pingFrame, 25)
-	local pingStroke = stroke(pingFrame, self.theme.Stroke, 0.70, 1)
+	local pingStroke = stroke(pingFrame, self.theme.Stroke, 0.88, 1)
 	bindTheme(self, pingStroke, "Color", "Stroke")
 
 	local pingIcon = createLucideIcon(self, pingFrame, "wifi", 16, {
@@ -833,15 +833,32 @@ function Library.new(data)
 		Position = UDim2.new(0, 10, 0.5, 0),
 		Size = UDim2.fromOffset(16, 16), ZIndex = 161,
 	}, "Accent")
-	pingIcon.ImageTransparency = 0.15
+	pingIcon.ImageTransparency = 0.58
 
 	local pingLabel = createLabel(self, pingFrame, "-- ms", 12, Enum.Font.GothamBold)
 	pingLabel.Position = UDim2.fromOffset(34, 0)
 	pingLabel.Size = UDim2.new(1, -43, 1, 0)
 	pingLabel.TextXAlignment = Enum.TextXAlignment.Left
-	pingLabel.TextTransparency = 0.20
+	pingLabel.TextTransparency = 0.62
 	pingLabel.ZIndex = 161
 	bindTheme(self, pingLabel, "TextColor3", "Muted")
+
+	-- Fade the ping watermark until the user hovers over it.
+	pingFrame.Active = true
+
+	pingFrame.MouseEnter:Connect(function()
+		tween(pingFrame, 0.18, { BackgroundTransparency = 0.16 })
+		tween(pingStroke, 0.18, { Transparency = 0.62 })
+		tween(pingIcon, 0.18, { ImageTransparency = 0.05 })
+		tween(pingLabel, 0.18, { TextTransparency = 0.08 })
+	end)
+
+	pingFrame.MouseLeave:Connect(function()
+		tween(pingFrame, 0.28, { BackgroundTransparency = 0.72 })
+		tween(pingStroke, 0.28, { Transparency = 0.88 })
+		tween(pingIcon, 0.28, { ImageTransparency = 0.58 })
+		tween(pingLabel, 0.28, { TextTransparency = 0.62 })
+	end)
 
 	self.pingFrame = pingFrame
 	self.pingLabel = pingLabel
@@ -1333,6 +1350,557 @@ function Library.new(data)
 		if success and avatar.Parent then avatar.Image = thumbnail end
 	end)
 
+	-- NeverLose-style profile options popup.
+	local profilePopup = create("Frame", {
+		Name = "ProfileOptions", Parent = main,
+		AnchorPoint = Vector2.new(0, 1),
+		Position = UDim2.new(0, 166, 1, -8),
+		Size = UDim2.fromOffset(235, 0),
+		AutomaticSize = Enum.AutomaticSize.Y,
+		BackgroundTransparency = 0.05,
+		BorderSizePixel = 0,
+		Visible = false,
+		ClipsDescendants = true,
+		ZIndex = 140,
+	})
+	bindTheme(self, profilePopup, "BackgroundColor3", "Card")
+	corner(profilePopup, 10)
+	local profilePopupStroke = stroke(profilePopup, self.theme.Stroke, 0.48, 1)
+	bindTheme(self, profilePopupStroke, "Color", "Stroke")
+
+	local profilePopupContent = create("Frame", {
+		Parent = profilePopup,
+		Size = UDim2.new(1, 0, 0, 0),
+		AutomaticSize = Enum.AutomaticSize.Y,
+		BackgroundTransparency = 1,
+		ZIndex = 141,
+	})
+	padding(profilePopupContent, 6, 6, 6, 6)
+
+	local profileLayout = create("UIListLayout", {
+		Parent = profilePopupContent,
+		SortOrder = Enum.SortOrder.LayoutOrder,
+		Padding = UDim.new(0, 3),
+	})
+
+	local profileClick = create("TextButton", {
+		Name = "ProfileClick", Parent = playerProfile,
+		Size = UDim2.fromScale(1, 1),
+		BackgroundTransparency = 1,
+		BorderSizePixel = 0,
+		Text = "",
+		AutoButtonColor = false,
+		ZIndex = 30,
+	})
+
+	local profileOpen = false
+	local function setProfileOpen(state)
+		profileOpen = state == true
+		profilePopup.Visible = profileOpen
+		tween(profileChevron, 0.16, {
+			Rotation = profileOpen and 90 or 0,
+			ImageTransparency = profileOpen and 0.05 or 0.42,
+		})
+	end
+
+	profileClick.MouseButton1Click:Connect(function()
+		setProfileOpen(not profileOpen)
+	end)
+
+	local function isPointInside(frame, point)
+		if not frame or not frame.Parent or not frame.Visible then return false end
+		local p = frame.AbsolutePosition
+		local s = frame.AbsoluteSize
+		return point.X >= p.X and point.X <= p.X + s.X
+			and point.Y >= p.Y and point.Y <= p.Y + s.Y
+	end
+
+	local profileOutsideConnection = UserInputService.InputBegan:Connect(function(inputObject)
+		if not profileOpen then return end
+		if inputObject.UserInputType ~= Enum.UserInputType.MouseButton1
+			and inputObject.UserInputType ~= Enum.UserInputType.Touch then
+			return
+		end
+
+		local point = inputObject.Position
+		if not isPointInside(profilePopup, point) and not isPointInside(playerProfile, point) then
+			setProfileOpen(false)
+		end
+	end)
+	self._connections[#self._connections + 1] = profileOutsideConnection
+
+	local UserSettings = {
+		Root = profilePopup,
+		Content = profilePopupContent,
+		UserFrame = nil,
+		Library = self,
+	}
+
+	function UserSettings:Open()
+		setProfileOpen(true)
+		return self
+	end
+
+	function UserSettings:Close()
+		setProfileOpen(false)
+		return self
+	end
+
+	function UserSettings:Toggle()
+		setProfileOpen(not profileOpen)
+		return self
+	end
+
+	local function addProfileDivider()
+		local line = create("Frame", {
+			Parent = profilePopupContent,
+			Size = UDim2.new(1, 0, 0, 1),
+			BorderSizePixel = 0,
+			ZIndex = 142,
+		})
+		bindTheme(self, line, "BackgroundColor3", "Stroke")
+		line.BackgroundTransparency = 0.68
+		return line
+	end
+
+	function UserSettings:AddUserFrame(name, imageValue, expires)
+		local window = self.Library
+		if self.UserFrame and self.UserFrame.Root and self.UserFrame.Root.Parent then
+			self.UserFrame.Root:Destroy()
+		end
+
+		local row = create("Frame", {
+			Parent = profilePopupContent,
+			Size = UDim2.new(1, 0, 0, 60),
+			BackgroundTransparency = 1,
+			BorderSizePixel = 0,
+			LayoutOrder = -100,
+			ZIndex = 142,
+		})
+
+		local rowAvatar = create("ImageLabel", {
+			Parent = row,
+			AnchorPoint = Vector2.new(0, 0.5),
+			Position = UDim2.new(0, 6, 0.5, 0),
+			Size = UDim2.fromOffset(42, 42),
+			BackgroundTransparency = 1,
+			Image = imageValue or avatar.Image,
+			ScaleType = Enum.ScaleType.Crop,
+			ZIndex = 143,
+		})
+		corner(rowAvatar, 42)
+
+		local rowName = createLabel(window, row, tostring(name or LocalPlayer.DisplayName), 13, Enum.Font.GothamMedium)
+		rowName.Position = UDim2.fromOffset(58, 8)
+		rowName.Size = UDim2.new(1, -65, 0, 20)
+		rowName.TextTransparency = 0.08
+		rowName.TextTruncate = Enum.TextTruncate.AtEnd
+		rowName.ZIndex = 143
+
+		local rowStatus = createLabel(window, row, tostring(expires or LocalPlayer.Name), 11, Enum.Font.GothamMedium)
+		rowStatus.Position = UDim2.fromOffset(58, 28)
+		rowStatus.Size = UDim2.new(1, -65, 0, 18)
+		rowStatus.TextTransparency = 0.52
+		rowStatus.TextTruncate = Enum.TextTruncate.AtEnd
+		rowStatus.ZIndex = 143
+
+		local item = {
+			Root = row,
+			Avatar = rowAvatar,
+			NameLabel = rowName,
+			StatusLabel = rowStatus,
+		}
+
+		function item:SetUsername(value)
+			rowName.Text = tostring(value or "User")
+			return self
+		end
+
+		function item:SetProfile(value)
+			rowAvatar.Image = tostring(value or "")
+			return self
+		end
+
+		function item:SetExpires(value)
+			rowStatus.Text = tostring(value or "Never")
+			return self
+		end
+
+		self.UserFrame = item
+		return item
+	end
+
+	local function createProfileRow(config)
+		config = config or {}
+		local row = create("TextButton", {
+			Parent = profilePopupContent,
+			Size = UDim2.new(1, 0, 0, 32),
+			BackgroundTransparency = 1,
+			BorderSizePixel = 0,
+			Text = "",
+			AutoButtonColor = false,
+			ZIndex = 142,
+		})
+		bindTheme(self, row, "BackgroundColor3", "Card2")
+		corner(row, 6)
+
+		local icon = createLucideIcon(self, row, config.Icon or config.icon or "circle", 15, {
+			AnchorPoint = Vector2.new(0, 0.5),
+			Position = UDim2.new(0, 9, 0.5, 0),
+			Size = UDim2.fromOffset(15, 15),
+			ZIndex = 143,
+		}, "Muted")
+		icon.ImageTransparency = 0.20
+
+		local label = createLabel(self, row, tostring(config.Name or config.name or "Option"), 11, Enum.Font.GothamMedium)
+		label.Position = UDim2.fromOffset(33, 0)
+		label.Size = UDim2.new(1, -70, 1, 0)
+		label.TextTransparency = 0.18
+		label.TextTruncate = Enum.TextTruncate.AtEnd
+		label.ZIndex = 143
+
+		row.MouseEnter:Connect(function()
+			tween(row, 0.12, { BackgroundTransparency = 0.62 })
+			tween(label, 0.12, { TextTransparency = 0.04 })
+			tween(icon, 0.12, { ImageTransparency = 0.02 })
+		end)
+
+		row.MouseLeave:Connect(function()
+			tween(row, 0.12, { BackgroundTransparency = 1 })
+			tween(label, 0.12, { TextTransparency = 0.18 })
+			tween(icon, 0.12, { ImageTransparency = 0.20 })
+		end)
+
+		return row, label, icon
+	end
+
+	function UserSettings:AddButton(config)
+		config = config or {}
+		local callback = config.Callback or config.callback or function() end
+		local row, label = createProfileRow(config)
+
+		local arrow = createLucideIcon(self, row, config.RightIcon or "chevron-right", 13, {
+			AnchorPoint = Vector2.new(1, 0.5),
+			Position = UDim2.new(1, -8, 0.5, 0),
+			Size = UDim2.fromOffset(13, 13),
+			ZIndex = 143,
+		}, "Muted")
+		arrow.ImageTransparency = 0.38
+
+		row.MouseButton1Click:Connect(function()
+			safeCall(callback)
+		end)
+
+		local item = { Root = row, Label = label }
+		function item:SetText(value)
+			label.Text = tostring(value or "")
+			return self
+		end
+		return item
+	end
+
+	function UserSettings:AddToggle(config)
+		local window = self.Library
+		config = config or {}
+		local callback = config.Callback or config.callback or function() end
+		local value = config.Default == true or config.default == true
+		local row, label = createProfileRow(config)
+
+		local track = create("Frame", {
+			Parent = row,
+			AnchorPoint = Vector2.new(1, 0.5),
+			Position = UDim2.new(1, -8, 0.5, 0),
+			Size = UDim2.fromOffset(31, 18),
+			BorderSizePixel = 0,
+			ZIndex = 143,
+		})
+		corner(track, 18)
+
+		local knob = create("Frame", {
+			Parent = track,
+			AnchorPoint = Vector2.new(0.5, 0.5),
+			Size = UDim2.fromOffset(14, 14),
+			BorderSizePixel = 0,
+			BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+			ZIndex = 144,
+		})
+		corner(knob, 14)
+
+		local function refresh(animated)
+			local trackColor = value and window.theme.Accent or window.theme.Background2
+			local pos = value and UDim2.new(0.72, 0, 0.5, 0) or UDim2.new(0.28, 0, 0.5, 0)
+			if animated then
+				tween(track, 0.14, { BackgroundColor3 = trackColor })
+				tween(knob, 0.14, { Position = pos, BackgroundTransparency = value and 0 or 0.35 })
+			else
+				track.BackgroundColor3 = trackColor
+				knob.Position = pos
+				knob.BackgroundTransparency = value and 0 or 0.35
+			end
+		end
+
+		row.MouseButton1Click:Connect(function()
+			value = not value
+			refresh(true)
+			safeCall(callback, value)
+		end)
+
+		local item = { Root = row, Label = label }
+		function item:Set(newValue, callCallback)
+			value = newValue == true
+			refresh(true)
+			if callCallback ~= false then safeCall(callback, value) end
+			return self
+		end
+		function item:Get() return value end
+
+		refresh(false)
+		return item
+	end
+
+	function UserSettings:AddChoice(config)
+		local window = self.Library
+		config = config or {}
+		local callback = config.Callback or config.callback or function() end
+		local values = {}
+		for _, v in ipairs(config.Values or config.values or config.List or config.list or {}) do
+			values[#values + 1] = tostring(v)
+		end
+
+		local current = tostring(config.Default or config.default or config.Value or config.value or values[1] or "")
+		local row, label = createProfileRow(config)
+
+		local valueLabel = createLabel(window, row, current, 10, Enum.Font.GothamMedium)
+		valueLabel.AnchorPoint = Vector2.new(1, 0.5)
+		valueLabel.Position = UDim2.new(1, -28, 0.5, 0)
+		valueLabel.Size = UDim2.fromOffset(82, 20)
+		valueLabel.TextXAlignment = Enum.TextXAlignment.Right
+		valueLabel.TextTransparency = 0.42
+		valueLabel.TextTruncate = Enum.TextTruncate.AtEnd
+		valueLabel.ZIndex = 143
+
+		local arrow = createLucideIcon(window, row, "chevron-right", 13, {
+			AnchorPoint = Vector2.new(1, 0.5),
+			Position = UDim2.new(1, -8, 0.5, 0),
+			Size = UDim2.fromOffset(13, 13),
+			ZIndex = 143,
+		}, "Muted")
+		arrow.ImageTransparency = 0.35
+
+		local choicePopup = create("Frame", {
+			Parent = main,
+			AnchorPoint = Vector2.new(0, 1),
+			Position = UDim2.new(0, 405, 1, -8),
+			Size = UDim2.fromOffset(175, 0),
+			AutomaticSize = Enum.AutomaticSize.Y,
+			BackgroundTransparency = 0.04,
+			BorderSizePixel = 0,
+			Visible = false,
+			ZIndex = 150,
+		})
+		bindTheme(window, choicePopup, "BackgroundColor3", "Card")
+		corner(choicePopup, 8)
+		local choiceStroke = stroke(choicePopup, window.theme.Stroke, 0.48, 1)
+		bindTheme(window, choiceStroke, "Color", "Stroke")
+		padding(choicePopup, 5, 5, 5, 5)
+
+		local choiceLayout = create("UIListLayout", {
+			Parent = choicePopup,
+			SortOrder = Enum.SortOrder.LayoutOrder,
+			Padding = UDim.new(0, 2),
+		})
+
+		local function rebuild()
+			for _, child in ipairs(choicePopup:GetChildren()) do
+				if child:IsA("TextButton") then child:Destroy() end
+			end
+
+			for _, choice in ipairs(values) do
+				local selected = choice == current
+				local option = create("TextButton", {
+					Parent = choicePopup,
+					Size = UDim2.new(1, 0, 0, 28),
+					BackgroundTransparency = selected and 0.65 or 1,
+					BorderSizePixel = 0,
+					Text = "",
+					AutoButtonColor = false,
+					ZIndex = 151,
+				})
+				bindTheme(window, option, "BackgroundColor3", "Card2")
+				corner(option, 5)
+
+				local optionText = createLabel(window, option, choice, 10, Enum.Font.GothamMedium)
+				optionText.Position = UDim2.fromOffset(8, 0)
+				optionText.Size = UDim2.new(1, -32, 1, 0)
+				optionText.TextTransparency = selected and 0.04 or 0.32
+				optionText.ZIndex = 152
+
+				if selected then
+					local check = createLucideIcon(window, option, "check", 12, {
+						AnchorPoint = Vector2.new(1, 0.5),
+						Position = UDim2.new(1, -8, 0.5, 0),
+						Size = UDim2.fromOffset(12, 12),
+						ZIndex = 152,
+					}, "Accent")
+					check.ImageTransparency = 0
+				end
+
+				option.MouseButton1Click:Connect(function()
+					current = choice
+					valueLabel.Text = choice
+					choicePopup.Visible = false
+					rebuild()
+					safeCall(callback, choice)
+				end)
+			end
+		end
+
+		row.MouseButton1Click:Connect(function()
+			choicePopup.Visible = not choicePopup.Visible
+			rebuild()
+		end)
+
+		local item = {
+			Root = row,
+			Label = label,
+			ValueLabel = valueLabel,
+			Popup = choicePopup,
+		}
+		function item:Set(value, callCallback)
+			current = tostring(value or "")
+			valueLabel.Text = current
+			rebuild()
+			if callCallback ~= false then safeCall(callback, current) end
+			return self
+		end
+		function item:Get() return current end
+		function item:SetValues(newValues)
+			table.clear(values)
+			for _, v in ipairs(newValues or {}) do values[#values + 1] = tostring(v) end
+			rebuild()
+			return self
+		end
+
+		rebuild()
+		return item
+	end
+
+	self.UserSettings = UserSettings
+	self.ProfileOptions = UserSettings
+	self.profilePopup = profilePopup
+
+	-- Built-in profile menu.
+	-- No client-side UserSettings setup is required.
+	local defaultProfile = UserSettings:AddUserFrame(
+		LocalPlayer.DisplayName,
+		avatar.Image,
+		"@" .. LocalPlayer.Name
+	)
+
+	task.spawn(function()
+		local ok, thumbnail = pcall(function()
+			return Players:GetUserThumbnailAsync(
+				LocalPlayer.UserId,
+				Enum.ThumbnailType.HeadShot,
+				Enum.ThumbnailSize.Size150x150
+			)
+		end)
+		if ok and defaultProfile and defaultProfile.SetProfile then
+			defaultProfile:SetProfile(thumbnail)
+		end
+	end)
+
+	addProfileDivider()
+
+	local builtInTheme = UserSettings:AddChoice({
+		Name = "Theme",
+		Icon = "palette",
+		Values = self:GetThemePresets(),
+		Default = self.currentThemePreset or "Walled Waves",
+		Callback = function(themeName)
+			self:SetThemePreset(themeName)
+			self:Notify({
+				Title = "Theme",
+				Content = "Changed to " .. tostring(themeName),
+				Icon = "palette",
+				Duration = 2,
+			})
+		end,
+	})
+
+	local builtInMode = UserSettings:AddChoice({
+		Name = "UI Mode",
+		Icon = "panels-top-left",
+		Values = { "Default", "Compact", "Mobile" },
+		Default = self._mobileMode and "Mobile" or (self.sidebarCollapsed and "Compact" or "Default"),
+		Callback = function(mode)
+			if mode == "Mobile" then
+				self:SetMobileMode(true)
+			elseif mode == "Compact" then
+				self:SetMobileMode(false)
+				self:SetSidebarCollapsed(true)
+			else
+				self:SetMobileMode(false)
+				self:SetSidebarCollapsed(false)
+			end
+		end,
+	})
+
+	local scalePercent = math.floor((self.uiScale or 1) * 100 + 0.5)
+	local nearestScale = math.clamp(math.floor((scalePercent + 5) / 10) * 10, 70, 130)
+
+	local builtInScale = UserSettings:AddChoice({
+		Name = "UI Scale",
+		Icon = "maximize-2",
+		Values = { "70%", "80%", "90%", "100%", "110%", "120%", "130%" },
+		Default = tostring(nearestScale) .. "%",
+		Callback = function(scaleText)
+			local number = tonumber(tostring(scaleText):gsub("%%", ""))
+			if number then
+				self:SetScale(number / 100)
+			end
+		end,
+	})
+
+	local builtInCompact = UserSettings:AddToggle({
+		Name = "Compact Sidebar",
+		Icon = "panel-left-close",
+		Default = self.sidebarCollapsed,
+		Callback = function(enabled)
+			if self._mobileMode then
+				self:SetMobileMode(false)
+			end
+			self:SetSidebarCollapsed(enabled)
+			if builtInMode and builtInMode.Set then
+				builtInMode:Set(enabled and "Compact" or "Default", false)
+			end
+		end,
+	})
+
+	addProfileDivider()
+
+	if self.keyEnabled then
+		UserSettings:AddButton({
+			Name = "Key System",
+			Icon = "key-round",
+			RightIcon = "chevron-right",
+			Callback = function()
+				UserSettings:Close()
+				self:ShowKeySystem()
+			end,
+		})
+	end
+
+	UserSettings:AddButton({
+		Name = "Hide UI",
+		Icon = "eye-off",
+		RightIcon = "chevron-right",
+		Callback = function()
+			UserSettings:Close()
+			self:Toggle(false)
+		end,
+	})
+
 	local content = create("Frame", {
 		Name = "RightMenuFrame", Parent = main,
 		Position = UDim2.new(0, 176, 0, 0), Size = UDim2.new(1, -176, 1, 0),
@@ -1542,6 +2110,8 @@ function Library.new(data)
 	self.sidebarCollapseIcon = sidebarCollapseIcon
 	self.playerProfile = playerProfile
 	self.playerProfileDivider = playerProfileDivider
+	self.usernameLabel = usernameLabel
+	self.displayNameLabel = displayNameLabel
 	self.navigationLabel = navigationLabel
 	self.dashboardTitleLabel = contentHeaderTitle
 	self.dashboardSubtitleLabel = contentHeaderSub
@@ -1884,6 +2454,37 @@ function Library:SetAutoResponsive(enabled)
 	return self
 end
 Library.setAutoResponsive = Library.SetAutoResponsive
+
+function Library:SetAccount(config)
+	config = config or {}
+
+	local username = tostring(config.Username or config.username or LocalPlayer.DisplayName)
+	local expires = tostring(config.Expires or config.expires or ("@" .. LocalPlayer.Name))
+	local profile = config.Profile or config.profile
+
+	if self.usernameLabel then
+		self.usernameLabel.Text = username
+	end
+	if self.displayNameLabel then
+		self.displayNameLabel.Text = expires
+	end
+
+	if self.UserSettings then
+		if self.UserSettings.UserFrame then
+			self.UserSettings.UserFrame:SetUsername(username)
+			self.UserSettings.UserFrame:SetExpires(expires)
+			if profile ~= nil then
+				self.UserSettings.UserFrame:SetProfile(profile)
+			end
+		else
+			self.UserSettings:AddUserFrame(username, profile, expires)
+		end
+	end
+
+	return self
+end
+
+Library.setAccount = Library.SetAccount
 
 function Library:CreateWindow(data) return Library.new(data or {}) end
 function Library:Create(data) return Library.new(data or {}) end
