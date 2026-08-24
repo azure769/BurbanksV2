@@ -1189,9 +1189,17 @@ function Library.new(data)
 	local sidebar = create("Frame", {
 		Name = "Sidebar", Parent = main,
 		Size = UDim2.new(0, 175, 1, 0), BorderSizePixel = 0,
-		BackgroundTransparency = 1, ZIndex = 60,
+		BackgroundTransparency = 0.12, ZIndex = 60,
 	})
 	bindTheme(self, sidebar, "BackgroundColor3", "Sidebar")
+
+	local sidebarDivider = create("Frame", {
+		Name = "SidebarDivider", Parent = sidebar,
+		AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 0, 0, 8),
+		Size = UDim2.new(0, 1, 1, -16), BorderSizePixel = 0, ZIndex = 61,
+	})
+	bindTheme(self, sidebarDivider, "BackgroundColor3", "Stroke")
+	sidebarDivider.BackgroundTransparency = 0.70
 
 	local headFrame = create("Frame", {
 		Name = "HeadFrame", Parent = sidebar,
@@ -1253,15 +1261,16 @@ function Library.new(data)
 
 	local pageButtons = create("ScrollingFrame", {
 		Name = "LeftScrollingFrame", Parent = sidebar, Active = true,
-		AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 60),
-		Size = UDim2.new(1, -10, 1, -115), BackgroundTransparency = 1,
-		BorderSizePixel = 0, CanvasSize = UDim2.new(), ScrollBarThickness = 0, ZIndex = 7,
+		AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 58),
+		Size = UDim2.new(1, -12, 1, -112), BackgroundTransparency = 1,
+		BorderSizePixel = 0, CanvasSize = UDim2.new(), ScrollBarThickness = 0, ZIndex = 62,
 	})
+	padding(pageButtons, 2, 2, 2, 2)
 	local pageLayout = create("UIListLayout", {
 		Parent = pageButtons, HorizontalAlignment = Enum.HorizontalAlignment.Center,
-		SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 5),
+		SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 4),
 	})
-	refreshCanvas(pageButtons, pageLayout, 1)
+	refreshCanvas(pageButtons, pageLayout, 6)
 
 	local navigationLabel = createLabel(self, sidebar, "", 1, Enum.Font.GothamMedium)
 	navigationLabel.Visible = false
@@ -2172,22 +2181,30 @@ function Library:addPage(data)
 	page._columns = {}
 
 	local button = create("TextButton", {
-		Parent = self.pagesContainer, Size = UDim2.new(1, -1, 0, 30),
-		BackgroundTransparency = 1, BorderSizePixel = 0, Text = "", AutoButtonColor = false,
-		ZIndex = 8,
+		Parent = self.pagesContainer,
+		Size = UDim2.new(1, 0, 0, 32),
+		BackgroundTransparency = 1, BorderSizePixel = 0,
+		Text = "", AutoButtonColor = false, ZIndex = 63,
 	})
 
 	local background = create("Frame", {
-		Parent = button, Size = UDim2.fromScale(1, 1),
-		BorderSizePixel = 0, BackgroundTransparency = 1, ZIndex = 8,
+		Parent = button,
+		Position = UDim2.fromOffset(1, 0),
+		Size = UDim2.new(1, -2, 1, 0),
+		BorderSizePixel = 0, BackgroundTransparency = 1, ZIndex = 63,
 	})
 	bindTheme(self, background, "BackgroundColor3", "Card2")
 	corner(background, 6)
 
 	local accent = create("Frame", {
-		Parent = background, Size = UDim2.fromOffset(0, 0),
-		BackgroundTransparency = 1, BorderSizePixel = 0,
+		Parent = background,
+		AnchorPoint = Vector2.new(0, 0.5),
+		Position = UDim2.new(0, 0, 0.5, 0),
+		Size = UDim2.fromOffset(2, 18),
+		BorderSizePixel = 0, BackgroundTransparency = 1, ZIndex = 65,
 	})
+	bindTheme(self, accent, "BackgroundColor3", "Accent")
+	corner(accent, 2)
 
 	local iconName = data.icon or data.Icon or data.iconText or data.IconText or "layout-grid"
 	local iconValue = tostring(iconName)
@@ -2197,26 +2214,25 @@ function Library:addPage(data)
 		local imageUrl = tonumber(iconValue) and ("rbxassetid://" .. iconValue) or iconValue
 		icon = create("ImageLabel", {
 			Parent = background, BackgroundTransparency = 1,
-			AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 7, 0.5, 0),
+			AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 11, 0.5, 0),
 			Size = UDim2.fromOffset(16, 16), Image = imageUrl, ScaleType = Enum.ScaleType.Fit,
-			ZIndex = 9,
+			ZIndex = 66,
 		})
 		bindTheme(self, icon, "ImageColor3", "Muted")
 	else
 		icon = createLucideIcon(self, background, iconValue, 16, {
 			AnchorPoint = Vector2.new(0, 0.5),
-			Position = UDim2.new(0, 7, 0.5, 0),
-			Size = UDim2.fromOffset(16, 16), ZIndex = 9,
+			Position = UDim2.new(0, 11, 0.5, 0),
+			Size = UDim2.fromOffset(16, 16), ZIndex = 66,
 		}, "Muted")
 	end
 
 	local title = createLabel(self, background, page.title, 12, Enum.Font.GothamMedium)
 	title.AnchorPoint = Vector2.new(0, 0.5)
-	title.Position = UDim2.new(0, 34, 0.5, 0)
-	title.Size = UDim2.new(1, -42, 0, 15)
-	title.ZIndex = 9
-	bindTheme(self, title, "TextColor3", "Text")
-	title.TextTransparency = 0.42
+	title.Position = UDim2.new(0, 38, 0.5, 0)
+	title.Size = UDim2.new(1, -48, 0, 18)
+	title.ZIndex = 66
+	title.TextTransparency = 0.48
 	title.TextTruncate = Enum.TextTruncate.AtEnd
 
 	local pageContainer = create("Frame", {
@@ -2303,23 +2319,37 @@ function Library:addPage(data)
 	end
 
 	button.MouseEnter:Connect(function()
-		if self.focusedPage ~= page then tween(background, 0.175, { BackgroundTransparency = 0.8 }) end
+		if self.focusedPage ~= page then
+			tween(background, 0.14, { BackgroundTransparency = 0.82 })
+			tween(title, 0.14, { TextTransparency = 0.22 })
+			if icon:IsA("ImageLabel") or icon:IsA("ImageButton") then
+				tween(icon, 0.14, { ImageTransparency = 0.18 })
+			end
+		end
 	end)
 	button.MouseLeave:Connect(function()
-		if self.focusedPage ~= page then tween(background, 0.175, { BackgroundTransparency = 1 }) end
+		if self.focusedPage ~= page then
+			tween(background, 0.14, { BackgroundTransparency = 1 })
+			tween(title, 0.14, { TextTransparency = 0.48 })
+			if icon:IsA("ImageLabel") or icon:IsA("ImageButton") then
+				tween(icon, 0.14, { ImageTransparency = 0.5 })
+			end
+		end
 	end)
 	button.MouseButton1Click:Connect(function() self:SelectPage({ page = page }) end)
 
 	bindThemeRefresh(self, function()
-		local selected = self.focusedPage == page
+		local isSelected = self.focusedPage == page
 		title.TextColor3 = self.theme.Text
-		title.TextTransparency = selected and 0 or 0.5
+		title.TextTransparency = isSelected and 0 or 0.48
+		accent.BackgroundColor3 = self.theme.Accent
+		accent.BackgroundTransparency = isSelected and 0 or 1
 		if icon:IsA("ImageLabel") or icon:IsA("ImageButton") then
-			icon.ImageColor3 = selected and self.theme.Accent or self.theme.Text
-			icon.ImageTransparency = selected and 0 or 0.5
+			icon.ImageColor3 = isSelected and self.theme.Accent or self.theme.Muted
+			icon.ImageTransparency = isSelected and 0 or 0.5
 		else
-			icon.TextColor3 = selected and self.theme.Accent or self.theme.Text
-			icon.TextTransparency = selected and 0 or 0.5
+			icon.TextColor3 = isSelected and self.theme.Accent or self.theme.Muted
+			icon.TextTransparency = isSelected and 0 or 0.5
 		end
 	end)
 
@@ -2336,19 +2366,22 @@ function Library:SelectPage(data)
 		local old = self.focusedPage
 		old.container.Visible = false
 		old.background.BackgroundTransparency = 1
-		old.buttonTitle.TextTransparency = 0.5
+		old.accent.BackgroundTransparency = 1
+		old.buttonTitle.TextTransparency = 0.48
+
 		if old.icon:IsA("ImageLabel") or old.icon:IsA("ImageButton") then
-			old.icon.ImageColor3 = self.theme.Text
+			old.icon.ImageColor3 = self.theme.Muted
 			old.icon.ImageTransparency = 0.5
 		else
-			old.icon.TextColor3 = self.theme.Text
+			old.icon.TextColor3 = self.theme.Muted
 			old.icon.TextTransparency = 0.5
 		end
 	end
 
 	self.focusedPage = selected
 	selected.container.Visible = true
-	selected.background.BackgroundTransparency = 0.5
+	selected.background.BackgroundTransparency = 0.72
+	selected.accent.BackgroundTransparency = 0
 	selected.buttonTitle.TextColor3 = self.theme.Text
 	selected.buttonTitle.TextTransparency = 0
 
@@ -2408,7 +2441,7 @@ function Page:addSection(data)
 		ZIndex = 23,
 	})
 
-	local title = createLabel(self.library, card, section.title, 10, Enum.Font.GothamBold)
+	local title = createLabel(self.library, card, section.title, 11, Enum.Font.GothamMedium)
 	title.AnchorPoint = Vector2.new(0.5, 0)
 	title.Position = UDim2.new(0.5, 0, 0, 0)
 	title.Size = UDim2.new(1, -35, 0, 15)
@@ -2988,76 +3021,172 @@ function Section:addKeybind(data)
 end
 Section.AddKeybind = Section.addKeybind
 
+local function createDropdownPopup(section, selectBox, hasSearch)
+	local window = section.library
+	local popup = create("Frame", {
+		Parent = window.container,
+		Size = UDim2.fromOffset(190, 176),
+		BackgroundTransparency = 0.06,
+		BorderSizePixel = 0,
+		Visible = false,
+		ClipsDescendants = true,
+		ZIndex = 420,
+	})
+	bindTheme(window, popup, "BackgroundColor3", "Card")
+	corner(popup, 8)
+	local popupStroke = stroke(popup, window.theme.Stroke, 0.45, 1)
+	bindTheme(window, popupStroke, "Color", "Stroke")
+
+	local search
+	local listY = 8
+	local listHeight = 160
+
+	if hasSearch ~= false then
+		search = create("TextBox", {
+			Parent = popup,
+			Position = UDim2.fromOffset(8, 8),
+			Size = UDim2.new(1, -16, 0, 28),
+			BackgroundTransparency = 0.45,
+			BorderSizePixel = 0,
+			ClearTextOnFocus = false,
+			PlaceholderText = "Search...",
+			Text = "",
+			Font = Enum.Font.GothamMedium,
+			TextSize = 11,
+			TextXAlignment = Enum.TextXAlignment.Left,
+			ZIndex = 422,
+		})
+		bindTheme(window, search, "BackgroundColor3", "Background2")
+		bindTheme(window, search, "TextColor3", "Text")
+		bindTheme(window, search, "PlaceholderColor3", "Muted")
+		search.TextTransparency = 0.15
+		corner(search, 5)
+		padding(search, 9, 8, 0, 0)
+		listY = 43
+		listHeight = 125
+	end
+
+	local list = create("ScrollingFrame", {
+		Parent = popup,
+		Position = UDim2.fromOffset(6, listY),
+		Size = UDim2.new(1, -12, 0, listHeight),
+		BackgroundTransparency = 1,
+		BorderSizePixel = 0,
+		CanvasSize = UDim2.new(),
+		ScrollBarThickness = 2,
+		ScrollBarImageTransparency = 0.45,
+		ZIndex = 421,
+	})
+	bindTheme(window, list, "ScrollBarImageColor3", "Accent")
+
+	local layout = create("UIListLayout", {
+		Parent = list,
+		SortOrder = Enum.SortOrder.LayoutOrder,
+		Padding = UDim.new(0, 3),
+	})
+	refreshCanvas(list, layout, 6)
+
+	local function positionPopup()
+		if not popup.Parent or not selectBox.Parent then return end
+
+		local absPos = selectBox.AbsolutePosition
+		local absSize = selectBox.AbsoluteSize
+		local camera = Workspace.CurrentCamera
+		local viewport = camera and camera.ViewportSize or Vector2.new(1920, 1080)
+
+		local width = math.max(170, math.min(220, absSize.X + 50))
+		local height = popup.Size.Y.Offset
+		local x = absPos.X + absSize.X - width
+		local y = absPos.Y + absSize.Y + 5
+
+		if x < 8 then x = 8 end
+		if x + width > viewport.X - 8 then x = viewport.X - width - 8 end
+		if y + height > viewport.Y - 8 then y = absPos.Y - height - 5 end
+		if y < 8 then y = 8 end
+
+		popup.Position = UDim2.fromOffset(x, y)
+		popup.Size = UDim2.fromOffset(width, height)
+	end
+
+	local connection = RunService.RenderStepped:Connect(function()
+		if popup.Visible then positionPopup() end
+	end)
+	window._connections[#window._connections + 1] = connection
+
+	return popup, search, list, positionPopup
+end
+
 function Section:addDropdown(data)
 	data = data or {}
 	local options = {
 		title = tostring(data.title or data.Title or "DROPDOWN"),
 		list = {},
-		selected = data.default,
+		selected = data.default or data.Default or data.selected or data.Selected,
 		callback = data.callback or data.Callback or function() end,
 	}
-	for _, value in ipairs(data.list or data.List or {}) do options.list[#options.list + 1] = tostring(value) end
+	for _, value in ipairs(data.list or data.List or {}) do
+		options.list[#options.list + 1] = tostring(value)
+	end
 
-	local module = createBoxedModule(self, 30)
-	module.ClipsDescendants = true
+	local module = createBoxedModule(self, 32)
+	module.ClipsDescendants = false
 
 	local infoText = getInfoText(data)
-	local title = createBoxedTitle(self, module, options.title, infoText and 176 or 145)
-	createInfoHint(self, module, infoText, 148)
+	local title = createBoxedTitle(self, module, options.title, infoText and 188 or 158)
+	createInfoHint(self, module, infoText, 156)
 
 	local selectBox = create("TextButton", {
-		Parent = module, AnchorPoint = Vector2.new(1, 0.5),
+		Parent = module,
+		AnchorPoint = Vector2.new(1, 0.5),
 		Position = UDim2.new(1, infoText and -34 or -10, 0.5, 0),
-		Size = UDim2.fromOffset(112, 18), BorderSizePixel = 0,
-		AutoButtonColor = false, Text = "",
+		Size = UDim2.fromOffset(126, 22),
+		BorderSizePixel = 0,
+		AutoButtonColor = false,
+		Text = "",
 	})
-	bindTheme(self.library, selectBox, "BackgroundColor3", "Card2")
-	corner(selectBox, 4)
-	local selectStroke = stroke(selectBox, self.library.theme.Stroke, 0.65, 1)
+	bindTheme(self.library, selectBox, "BackgroundColor3", "Background2")
+	selectBox.BackgroundTransparency = 0.28
+	corner(selectBox, 5)
+	local selectStroke = stroke(selectBox, self.library.theme.Stroke, 0.58, 1)
 	bindTheme(self.library, selectStroke, "Color", "Stroke")
 
-	local selectedLabel = createLabel(self.library, selectBox, options.selected and tostring(options.selected) or "None", 11, Enum.Font.GothamMedium)
-	selectedLabel.Position = UDim2.fromOffset(5, 0)
-	selectedLabel.Size = UDim2.new(1, -23, 1, 0)
-	selectedLabel.TextTransparency = 0.5
+	local selectedLabel = createLabel(
+		self.library,
+		selectBox,
+		options.selected and tostring(options.selected) or "Select",
+		10,
+		Enum.Font.GothamMedium
+	)
+	selectedLabel.Position = UDim2.fromOffset(8, 0)
+	selectedLabel.Size = UDim2.new(1, -29, 1, 0)
+	selectedLabel.TextTransparency = 0.28
 	selectedLabel.TextTruncate = Enum.TextTruncate.AtEnd
 
 	local arrow = createLucideIcon(self.library, selectBox, "chevron-down", 13, {
 		AnchorPoint = Vector2.new(1, 0.5),
-		Position = UDim2.new(1, -5, 0.5, 0),
-		Size = UDim2.fromOffset(13, 13), ZIndex = 6,
+		Position = UDim2.new(1, -7, 0.5, 0),
+		Size = UDim2.fromOffset(13, 13),
+		ZIndex = 8,
 	}, "Muted")
-	arrow.ImageTransparency = 0.22
+	arrow.ImageTransparency = 0.18
 
-	local search = create("TextBox", {
-		Parent = module, Position = UDim2.fromOffset(8, 34),
-		Size = UDim2.new(1, -16, 0, 24), BorderSizePixel = 0,
-		ClearTextOnFocus = false, PlaceholderText = "Search", Text = "",
-		Font = Enum.Font.GothamMedium, TextSize = 11, Visible = false,
-	})
-	bindTheme(self.library, search, "BackgroundColor3", "Background2")
-	bindTheme(self.library, search, "TextColor3", "Text")
-	bindTheme(self.library, search, "PlaceholderColor3", "Muted")
-	search.TextTransparency = 0.35
-	corner(search, 4)
-	local searchStroke = stroke(search, self.library.theme.Stroke, 0.65, 1)
-	bindTheme(self.library, searchStroke, "Color", "Stroke")
-
-	local list = create("ScrollingFrame", {
-		Parent = module, Position = UDim2.fromOffset(8, 62),
-		Size = UDim2.new(1, -16, 0, 102), BackgroundTransparency = 1,
-		BorderSizePixel = 0, CanvasSize = UDim2.new(), ScrollBarThickness = 0, Visible = false,
-	})
-	local layout = create("UIListLayout", { Parent = list, SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 3) })
-	refreshCanvas(list, layout, 4)
-
+	local popup, search, list, positionPopup = createDropdownPopup(self, selectBox, true)
 	local opened = false
+
 	local function setOpen(state)
 		opened = state == true
-		search.Visible = opened
-		list.Visible = opened
-		tween(arrow, 0.175, { Rotation = opened and 180 or 0, ImageTransparency = opened and 0.05 or 0.22 })
-		tween(module, 0.175, { Size = UDim2.new(1, 0, 0, opened and 170 or 30) })
+		popup.Visible = opened
+		tween(arrow, 0.15, {
+			Rotation = opened and 180 or 0,
+			ImageTransparency = opened and 0 or 0.18,
+		})
+		if opened then
+			positionPopup()
+			search.Text = ""
+			task.defer(function()
+				if search and search.Parent then search:CaptureFocus() end
+			end)
+		end
 	end
 
 	local function clearEntries()
@@ -3069,42 +3198,74 @@ function Section:addDropdown(data)
 	local function rebuild(filter)
 		clearEntries()
 		filter = string.lower(tostring(filter or ""))
+
 		for _, value in ipairs(options.list) do
 			if filter == "" or string.find(string.lower(value), filter, 1, true) then
+				local isSelected = tostring(options.selected or "") == value
+
 				local entry = create("TextButton", {
-					Parent = list, Size = UDim2.new(1, 0, 0, 26),
-					BorderSizePixel = 0, AutoButtonColor = false,
-					Font = Enum.Font.GothamMedium, Text = value, TextSize = 11,
+					Parent = list,
+					Size = UDim2.new(1, 0, 0, 28),
+					BackgroundTransparency = isSelected and 0.66 or 1,
+					BorderSizePixel = 0,
+					AutoButtonColor = false,
+					Text = "",
+					ZIndex = 423,
 				})
 				bindTheme(self.library, entry, "BackgroundColor3", "Card2")
-				bindTheme(self.library, entry, "TextColor3", "Text")
-				entry.BackgroundTransparency = 1
-				entry.TextTransparency = 0.5
-				corner(entry, 4)
+				corner(entry, 5)
+
+				local entryText = createLabel(self.library, entry, value, 11, Enum.Font.GothamMedium)
+				entryText.Position = UDim2.fromOffset(9, 0)
+				entryText.Size = UDim2.new(1, -34, 1, 0)
+				entryText.TextTransparency = isSelected and 0.05 or 0.40
+				entryText.ZIndex = 424
+
+				if isSelected then
+					local check = createLucideIcon(self.library, entry, "check", 13, {
+						AnchorPoint = Vector2.new(1, 0.5),
+						Position = UDim2.new(1, -8, 0.5, 0),
+						Size = UDim2.fromOffset(13, 13),
+						ZIndex = 424,
+					}, "Accent")
+					check.ImageTransparency = 0
+				end
 
 				entry.MouseEnter:Connect(function()
-					tween(entry, 0.12, { BackgroundTransparency = 0.35, TextTransparency = 0.2 })
+					tween(entry, 0.12, { BackgroundTransparency = 0.62 })
+					tween(entryText, 0.12, { TextTransparency = 0.08 })
 				end)
 				entry.MouseLeave:Connect(function()
-					tween(entry, 0.12, { BackgroundTransparency = 1, TextTransparency = 0.5 })
+					tween(entry, 0.12, { BackgroundTransparency = isSelected and 0.66 or 1 })
+					tween(entryText, 0.12, { TextTransparency = isSelected and 0.05 or 0.40 })
 				end)
+
 				entry.MouseButton1Click:Connect(function()
 					options.selected = value
 					selectedLabel.Text = value
 					setOpen(false)
+					rebuild("")
 					safeCall(options.callback, value)
 				end)
 			end
 		end
 	end
 
+	selectBox.MouseEnter:Connect(function()
+		tween(selectBox, 0.12, { BackgroundTransparency = 0.12 })
+	end)
+	selectBox.MouseLeave:Connect(function()
+		if not opened then tween(selectBox, 0.12, { BackgroundTransparency = 0.28 }) end
+	end)
 	selectBox.MouseButton1Click:Connect(function()
 		setOpen(not opened)
-		if opened then search.Text = ""; rebuild("") end
+		if opened then rebuild("") end
 	end)
+
 	search:GetPropertyChangedSignal("Text"):Connect(function()
 		if opened then rebuild(search.Text) end
 	end)
+
 	rebuild("")
 
 	local controller = { Instance = module, Options = options }
@@ -3112,6 +3273,7 @@ function Section:addDropdown(data)
 		value = tostring(value)
 		options.selected = value
 		selectedLabel.Text = value
+		rebuild(search.Text)
 		if callCallback ~= false then safeCall(options.callback, value) end
 		return self
 	end
@@ -3121,18 +3283,27 @@ function Section:addDropdown(data)
 			options.title = tostring(newOptions.title or newOptions.Title)
 			title.Text = options.title
 		end
+
 		local newList = newOptions.list or newOptions.List
 		if typeof(newList) == "table" then
 			table.clear(options.list)
-			for _, value in ipairs(newList) do options.list[#options.list + 1] = tostring(value) end
+			for _, value in ipairs(newList) do
+				options.list[#options.list + 1] = tostring(value)
+			end
 			rebuild(search.Text)
 		end
+
 		local selected = newOptions.default or newOptions.Default or newOptions.selected or newOptions.Selected
 		if selected ~= nil then self:Set(selected, false) end
-		if typeof(newOptions.callback) == "function" then options.callback = newOptions.callback
-		elseif typeof(newOptions.Callback) == "function" then options.callback = newOptions.Callback end
+
+		if typeof(newOptions.callback) == "function" then
+			options.callback = newOptions.callback
+		elseif typeof(newOptions.Callback) == "function" then
+			options.callback = newOptions.Callback
+		end
 		return self
 	end
+
 	self.modules[#self.modules + 1] = controller
 	return controller
 end
@@ -3142,11 +3313,16 @@ function Section:addMultiDropdown(data)
 	data = data or {}
 	local options = {
 		title = tostring(data.title or data.Title or "MULTI DROPDOWN"),
-		list = {}, selected = {},
+		list = {},
+		selected = {},
 		callback = data.callback or data.Callback or function() end,
 		max = tonumber(data.max or data.Max),
 	}
-	for _, value in ipairs(data.list or data.List or {}) do options.list[#options.list + 1] = tostring(value) end
+
+	for _, value in ipairs(data.list or data.List or {}) do
+		options.list[#options.list + 1] = tostring(value)
+	end
+
 	local defaults = data.default or data.Default or data.selected or data.Selected or {}
 	if typeof(defaults) ~= "table" then defaults = {defaults} end
 	for _, value in ipairs(defaults) do
@@ -3156,58 +3332,43 @@ function Section:addMultiDropdown(data)
 		end
 	end
 
-	local module = createBoxedModule(self, 30)
-	module.ClipsDescendants = true
+	local module = createBoxedModule(self, 32)
+	module.ClipsDescendants = false
 
 	local infoText = getInfoText(data)
-	local title = createBoxedTitle(self, module, options.title, infoText and 176 or 145)
-	createInfoHint(self, module, infoText, 148)
+	local title = createBoxedTitle(self, module, options.title, infoText and 188 or 158)
+	createInfoHint(self, module, infoText, 156)
 
 	local selectBox = create("TextButton", {
-		Parent = module, AnchorPoint = Vector2.new(1, 0.5),
+		Parent = module,
+		AnchorPoint = Vector2.new(1, 0.5),
 		Position = UDim2.new(1, infoText and -34 or -10, 0.5, 0),
-		Size = UDim2.fromOffset(112, 18), BorderSizePixel = 0,
-		AutoButtonColor = false, Text = "",
+		Size = UDim2.fromOffset(126, 22),
+		BorderSizePixel = 0,
+		AutoButtonColor = false,
+		Text = "",
 	})
-	bindTheme(self.library, selectBox, "BackgroundColor3", "Card2")
-	corner(selectBox, 4)
-	local selectStroke = stroke(selectBox, self.library.theme.Stroke, 0.65, 1)
+	bindTheme(self.library, selectBox, "BackgroundColor3", "Background2")
+	selectBox.BackgroundTransparency = 0.28
+	corner(selectBox, 5)
+	local selectStroke = stroke(selectBox, self.library.theme.Stroke, 0.58, 1)
 	bindTheme(self.library, selectStroke, "Color", "Stroke")
 
-	local selectedLabel = createLabel(self.library, selectBox, "", 11, Enum.Font.GothamMedium)
-	selectedLabel.Position = UDim2.fromOffset(5, 0)
-	selectedLabel.Size = UDim2.new(1, -23, 1, 0)
-	selectedLabel.TextTransparency = 0.5
+	local selectedLabel = createLabel(self.library, selectBox, "", 10, Enum.Font.GothamMedium)
+	selectedLabel.Position = UDim2.fromOffset(8, 0)
+	selectedLabel.Size = UDim2.new(1, -29, 1, 0)
+	selectedLabel.TextTransparency = 0.28
 	selectedLabel.TextTruncate = Enum.TextTruncate.AtEnd
 
 	local arrow = createLucideIcon(self.library, selectBox, "chevron-down", 13, {
 		AnchorPoint = Vector2.new(1, 0.5),
-		Position = UDim2.new(1, -5, 0.5, 0),
-		Size = UDim2.fromOffset(13, 13), ZIndex = 6,
+		Position = UDim2.new(1, -7, 0.5, 0),
+		Size = UDim2.fromOffset(13, 13),
+		ZIndex = 8,
 	}, "Muted")
-	arrow.ImageTransparency = 0.22
+	arrow.ImageTransparency = 0.18
 
-	local search = create("TextBox", {
-		Parent = module, Position = UDim2.fromOffset(8, 34),
-		Size = UDim2.new(1, -16, 0, 24), BorderSizePixel = 0,
-		ClearTextOnFocus = false, PlaceholderText = "Search", Text = "",
-		Font = Enum.Font.GothamMedium, TextSize = 11, Visible = false,
-	})
-	bindTheme(self.library, search, "BackgroundColor3", "Background2")
-	bindTheme(self.library, search, "TextColor3", "Text")
-	bindTheme(self.library, search, "PlaceholderColor3", "Muted")
-	search.TextTransparency = 0.35
-	corner(search, 4)
-	local searchStroke = stroke(search, self.library.theme.Stroke, 0.65, 1)
-	bindTheme(self.library, searchStroke, "Color", "Stroke")
-
-	local list = create("ScrollingFrame", {
-		Parent = module, Position = UDim2.fromOffset(8, 62),
-		Size = UDim2.new(1, -16, 0, 110), BackgroundTransparency = 1,
-		BorderSizePixel = 0, CanvasSize = UDim2.new(), ScrollBarThickness = 0, Visible = false,
-	})
-	local layout = create("UIListLayout", { Parent = list, SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 3) })
-	refreshCanvas(list, layout, 4)
+	local popup, search, list, positionPopup = createDropdownPopup(self, selectBox, true)
 
 	local function copySelected()
 		local result = {}
@@ -3217,11 +3378,9 @@ function Section:addMultiDropdown(data)
 
 	local function updateTitle()
 		if #options.selected == 0 then
-			selectedLabel.Text = "None"
+			selectedLabel.Text = "Select"
 		elseif #options.selected == 1 then
 			selectedLabel.Text = options.selected[1]
-		elseif #options.selected <= 2 then
-			selectedLabel.Text = table.concat(options.selected, ", ")
 		else
 			selectedLabel.Text = ("%d selected"):format(#options.selected)
 		end
@@ -3230,10 +3389,18 @@ function Section:addMultiDropdown(data)
 	local opened = false
 	local function setOpen(state)
 		opened = state == true
-		search.Visible = opened
-		list.Visible = opened
-		tween(arrow, 0.175, { Rotation = opened and 180 or 0, ImageTransparency = opened and 0.05 or 0.22 })
-		tween(module, 0.175, { Size = UDim2.new(1, 0, 0, opened and 178 or 30) })
+		popup.Visible = opened
+		tween(arrow, 0.15, {
+			Rotation = opened and 180 or 0,
+			ImageTransparency = opened and 0 or 0.18,
+		})
+		if opened then
+			positionPopup()
+			search.Text = ""
+			task.defer(function()
+				if search and search.Parent then search:CaptureFocus() end
+			end)
+		end
 	end
 
 	local function clearEntries()
@@ -3246,41 +3413,60 @@ function Section:addMultiDropdown(data)
 	rebuild = function(filter)
 		clearEntries()
 		filter = string.lower(tostring(filter or ""))
+
 		for _, value in ipairs(options.list) do
 			if filter == "" or string.find(string.lower(value), filter, 1, true) then
 				local isSelected = table.find(options.selected, value) ~= nil
+
 				local entry = create("TextButton", {
-					Parent = list, Size = UDim2.new(1, 0, 0, 26),
-					BorderSizePixel = 0, AutoButtonColor = false, Text = "",
+					Parent = list,
+					Size = UDim2.new(1, 0, 0, 28),
+					BackgroundTransparency = isSelected and 0.66 or 1,
+					BorderSizePixel = 0,
+					AutoButtonColor = false,
+					Text = "",
+					ZIndex = 423,
 				})
 				bindTheme(self.library, entry, "BackgroundColor3", "Card2")
-				entry.BackgroundTransparency = 1
-				corner(entry, 4)
+				corner(entry, 5)
 
 				local checkBox = create("Frame", {
-					Parent = entry, Position = UDim2.fromOffset(5, 4),
-					Size = UDim2.fromOffset(18, 18), BorderSizePixel = 0,
+					Parent = entry,
+					AnchorPoint = Vector2.new(0, 0.5),
+					Position = UDim2.new(0, 8, 0.5, 0),
+					Size = UDim2.fromOffset(16, 16),
+					BorderSizePixel = 0,
+					BackgroundTransparency = isSelected and 0 or 0.70,
+					ZIndex = 424,
 				})
 				bindTheme(self.library, checkBox, "BackgroundColor3", isSelected and "Accent" or "Background2")
 				corner(checkBox, 4)
-				local checkStroke = stroke(checkBox, self.library.theme.Stroke, 0.65, 1)
-				bindTheme(self.library, checkStroke, "Color", "Stroke")
 
-				local check = createLabel(self.library, checkBox, isSelected and "✓" or "", 10, Enum.Font.GothamBold)
-				check.Size = UDim2.fromScale(1, 1)
-				check.TextXAlignment = Enum.TextXAlignment.Center
+				if isSelected then
+					local check = createLucideIcon(self.library, checkBox, "check", 11, {
+						AnchorPoint = Vector2.new(0.5, 0.5),
+						Position = UDim2.fromScale(0.5, 0.5),
+						Size = UDim2.fromOffset(11, 11),
+						ZIndex = 425,
+					}, "Text")
+					check.ImageTransparency = 0
+				end
 
 				local entryText = createLabel(self.library, entry, value, 11, Enum.Font.GothamMedium)
-				entryText.Position = UDim2.fromOffset(30, 0)
-				entryText.Size = UDim2.new(1, -34, 1, 0)
-				entryText.TextTransparency = isSelected and 0.2 or 0.5
+				entryText.Position = UDim2.fromOffset(32, 0)
+				entryText.Size = UDim2.new(1, -40, 1, 0)
+				entryText.TextTransparency = isSelected and 0.05 or 0.40
+				entryText.ZIndex = 424
 
 				entry.MouseEnter:Connect(function()
-					tween(entry, 0.12, { BackgroundTransparency = 0.35 })
+					tween(entry, 0.12, { BackgroundTransparency = 0.62 })
+					tween(entryText, 0.12, { TextTransparency = 0.08 })
 				end)
 				entry.MouseLeave:Connect(function()
-					tween(entry, 0.12, { BackgroundTransparency = 1 })
+					tween(entry, 0.12, { BackgroundTransparency = isSelected and 0.66 or 1 })
+					tween(entryText, 0.12, { TextTransparency = isSelected and 0.05 or 0.40 })
 				end)
+
 				entry.MouseButton1Click:Connect(function()
 					local index = table.find(options.selected, value)
 					if index then
@@ -3289,6 +3475,7 @@ function Section:addMultiDropdown(data)
 						if options.max and #options.selected >= options.max then return end
 						options.selected[#options.selected + 1] = value
 					end
+
 					updateTitle()
 					rebuild(search.Text)
 					safeCall(options.callback, copySelected(), value)
@@ -3297,79 +3484,82 @@ function Section:addMultiDropdown(data)
 		end
 	end
 
+	selectBox.MouseEnter:Connect(function()
+		tween(selectBox, 0.12, { BackgroundTransparency = 0.12 })
+	end)
+	selectBox.MouseLeave:Connect(function()
+		if not opened then tween(selectBox, 0.12, { BackgroundTransparency = 0.28 }) end
+	end)
 	selectBox.MouseButton1Click:Connect(function()
 		setOpen(not opened)
-		if opened then search.Text = ""; rebuild("") end
+		if opened then rebuild("") end
 	end)
+
 	search:GetPropertyChangedSignal("Text"):Connect(function()
 		if opened then rebuild(search.Text) end
 	end)
+
 	updateTitle()
 	rebuild("")
 
 	local controller = { Instance = module, Options = options }
+	function controller:Get() return copySelected() end
 	function controller:Set(values, callCallback)
 		if typeof(values) ~= "table" then values = {values} end
 		table.clear(options.selected)
+
 		for _, value in ipairs(values) do
 			local stringValue = tostring(value)
-			if table.find(options.list, stringValue) and not table.find(options.selected, stringValue)
-				and (not options.max or #options.selected < options.max) then
+			if table.find(options.list, stringValue) then
 				options.selected[#options.selected + 1] = stringValue
 			end
 		end
+
 		updateTitle()
 		rebuild(search.Text)
-		if callCallback ~= false then safeCall(options.callback, copySelected()) end
+
+		if callCallback ~= false then
+			safeCall(options.callback, copySelected())
+		end
 		return self
 	end
-	function controller:Get() return copySelected() end
-	function controller:Clear(callCallback) return self:Set({}, callCallback) end
 	function controller:Update(newOptions)
 		newOptions = newOptions or {}
+
 		if newOptions.title ~= nil or newOptions.Title ~= nil then
 			options.title = tostring(newOptions.title or newOptions.Title)
 			title.Text = options.title
 		end
+
 		local newList = newOptions.list or newOptions.List
 		if typeof(newList) == "table" then
 			table.clear(options.list)
-			for _, value in ipairs(newList) do options.list[#options.list + 1] = tostring(value) end
+			for _, value in ipairs(newList) do
+				options.list[#options.list + 1] = tostring(value)
+			end
+			rebuild(search.Text)
 		end
-		if newOptions.max ~= nil or newOptions.Max ~= nil then options.max = tonumber(newOptions.max or newOptions.Max) end
-		local newSelected = newOptions.default or newOptions.Default or newOptions.selected or newOptions.Selected
-		if newSelected ~= nil then self:Set(newSelected, false) else updateTitle(); rebuild(search.Text) end
-		if typeof(newOptions.callback) == "function" then options.callback = newOptions.callback
-		elseif typeof(newOptions.Callback) == "function" then options.callback = newOptions.Callback end
+
+		if newOptions.max ~= nil or newOptions.Max ~= nil then
+			options.max = tonumber(newOptions.max or newOptions.Max)
+		end
+
+		local selected = newOptions.default or newOptions.Default or newOptions.selected or newOptions.Selected
+		if selected ~= nil then self:Set(selected, false) end
+
+		if typeof(newOptions.callback) == "function" then
+			options.callback = newOptions.callback
+		elseif typeof(newOptions.Callback) == "function" then
+			options.callback = newOptions.Callback
+		end
+
 		return self
 	end
+
 	self.modules[#self.modules + 1] = controller
 	return controller
 end
 Section.AddMultiDropdown = Section.addMultiDropdown
-Section.addMultiSelectDropdown = Section.addMultiDropdown
-Section.AddMultiSelectDropdown = Section.addMultiDropdown
-
-function Section:addThemeSelector(data)
-	data = data or {}
-	local defaultTheme = tostring(data.default or data.Default or self.library.currentThemePreset or "Walled Waves")
-	if not THEME_PRESETS[defaultTheme] then defaultTheme = "Walled Waves" end
-	self.library.currentThemePreset = defaultTheme
-	self.library:setThemePreset(defaultTheme)
-	return self:addDropdown({
-		title = tostring(data.title or data.Title or "Theme"),
-		list = self.library:getThemePresets(),
-		default = defaultTheme,
-		info = getInfoText(data),
-		callback = function(selectedTheme)
-			self.library:setThemePreset(selectedTheme)
-			safeCall(data.callback or data.Callback, selectedTheme)
-		end,
-	})
-end
-Section.AddThemeSelector = Section.addThemeSelector
-Section.addTheme = Section.addThemeSelector
-Section.AddTheme = Section.addThemeSelector
 
 function Section:addColorPicker(data)
 	data = data or {}
