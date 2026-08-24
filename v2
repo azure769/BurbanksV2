@@ -1,4 +1,3 @@
-print("[Burbanks] ui loading")
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
@@ -1190,7 +1189,7 @@ function Library.new(data)
 	local sidebar = create("Frame", {
 		Name = "Sidebar", Parent = main,
 		Size = UDim2.new(0, 175, 1, 0), BorderSizePixel = 0,
-		BackgroundTransparency = 1, ZIndex = 5,
+		BackgroundTransparency = 1, ZIndex = 60,
 	})
 	bindTheme(self, sidebar, "BackgroundColor3", "Sidebar")
 
@@ -1350,8 +1349,8 @@ function Library.new(data)
 	-- causing options to render underneath the sidebar.
 	local pagesHost = create("Frame", {
 		Name = "PagesViewport", Parent = content,
-		Position = UDim2.fromOffset(8, 54),
-		Size = UDim2.new(1, -16, 1, -62),
+		Position = UDim2.fromOffset(12, 58),
+		Size = UDim2.new(1, -24, 1, -70),
 		BackgroundTransparency = 1,
 		BorderSizePixel = 0,
 		ClipsDescendants = true,
@@ -1670,40 +1669,58 @@ Library.GetUIScale = Library.GetScale
 function Library:SetSidebarCollapsed(state)
 	self.sidebarCollapsed = state == true
 	if not self.sidebar or not self.content then return self end
-	local collapsedWidth = 58
-	local expandedWidth = 175
-	local width = self.sidebarCollapsed and collapsedWidth or expandedWidth
 
-	tween(self.sidebar, 0.18, { Size = UDim2.new(0, width, 1, 0) })
+	local sidebarWidth = self.sidebarCollapsed and 58 or 175
+	tween(self.sidebar, 0.18, { Size = UDim2.new(0, sidebarWidth, 1, 0) })
+
+	-- IMPORTANT:
+	-- Desktop page geometry is locked to the 176px NeverLose content rail.
+	-- Collapsing the sidebar changes ONLY the sidebar visuals, never the page origin.
+	-- On mobile the rail moves beside the compact 58px sidebar.
+	local contentX = self._mobileMode and 59 or 176
 	tween(self.content, 0.18, {
-		Position = UDim2.fromOffset(width + 1, 0),
-		Size = UDim2.new(1, -(width + 1), 1, 0),
+		Position = UDim2.fromOffset(contentX, 0),
+		Size = UDim2.new(1, -contentX, 1, 0),
 	})
 
 	if self.navigationLabel then self.navigationLabel.Visible = false end
 	if self.playerProfile then self.playerProfile.Visible = not self.sidebarCollapsed end
 	if self.playerProfileDivider then self.playerProfileDivider.Visible = not self.sidebarCollapsed end
-	if self.sidebarCollapseIcon then tween(self.sidebarCollapseIcon, 0.18, { Rotation = self.sidebarCollapsed and 180 or 0 }) end
+	if self.sidebarCollapseIcon then
+		tween(self.sidebarCollapseIcon, 0.18, { Rotation = self.sidebarCollapsed and 180 or 0 })
+	end
 
 	if self.titleLabel then self.titleLabel.Visible = not self.sidebarCollapsed end
 	if self.subtitleLabel then self.subtitleLabel.Visible = not self.sidebarCollapsed end
+
 	if self.logoImage then
-		self.logoImage.Position = self.sidebarCollapsed and UDim2.new(0.5, -17, 0.5, 0) or UDim2.new(0, 10, 0.5, 0)
+		self.logoImage.AnchorPoint = Vector2.new(0, 0.5)
+		self.logoImage.Position = self.sidebarCollapsed
+			and UDim2.new(0, 20, 0.5, 0)
+			or UDim2.new(0, 10, 0.5, 0)
 	end
 	if self.logoText then
-		self.logoText.Position = self.sidebarCollapsed and UDim2.new(0.5, -17, 0.5, -17) or UDim2.new(0, 10, 0.5, -17)
+		self.logoText.Position = self.sidebarCollapsed
+			and UDim2.new(0, 12, 0.5, -17)
+			or UDim2.new(0, 10, 0.5, -17)
 	end
 
 	for _, page in ipairs(self.pages) do
-		if page.buttonTitle then page.buttonTitle.Visible = not self.sidebarCollapsed end
+		if page.buttonTitle then
+			page.buttonTitle.Visible = not self.sidebarCollapsed
+		end
 		if page.icon then
-			if page.icon:IsA("ImageLabel") or page.icon:IsA("ImageButton") then
-				page.icon.Position = self.sidebarCollapsed and UDim2.new(0.5, -9, 0.5, 0) or UDim2.new(0, 2, 0.5, 0)
-			else
-				page.icon.Position = self.sidebarCollapsed and UDim2.new(0.5, -12, 0.5, 0) or UDim2.new(0, 2, 0.5, 0)
-			end
+			page.icon.AnchorPoint = Vector2.new(0, 0.5)
+			page.icon.Position = self.sidebarCollapsed
+				and UDim2.new(0, 20, 0.5, 0)
+				or UDim2.new(0, 7, 0.5, 0)
 		end
 	end
+
+	for _, page in ipairs(self.pages) do
+		self:_applyPageLayout(page, self._mobileMode)
+	end
+
 	return self
 end
 Library.setSidebarCollapsed = Library.SetSidebarCollapsed
@@ -1711,6 +1728,7 @@ Library.ToggleSidebar = function(self) return self:SetSidebarCollapsed(not self.
 
 function Library:_applyPageLayout(page, mobile)
 	if not page or not page._columns then return end
+
 	local left = page._columns.left
 	local right = page._columns.right
 	local full = page._columns.full
@@ -1718,60 +1736,96 @@ function Library:_applyPageLayout(page, mobile)
 
 	local sections = page.sections or {}
 	local sectionCount = #sections
-	local hasFull = false
 
-	for _, section in ipairs(sections) do
-		if section.column == "full" then
-			hasFull = true
-			break
+	-- Reset all columns to a known state before laying anything out.
+	left.AnchorPoint = Vector2.new(0, 0)
+	right.AnchorPoint = Vector2.new(0, 0)
+	full.AnchorPoint = Vector2.new(0, 0)
+
+	if mobile then
+		-- Mobile: one vertical page rail. Sections preserve their requested column,
+		-- but left/right columns become stacked halves.
+		full.Visible = false
+		left.Visible = true
+		right.Visible = true
+
+		if sectionCount <= 1 then
+			local only = sections[1]
+			if only and only.column == "right" then
+				left.Visible = false
+				right.Position = UDim2.fromOffset(0, 0)
+				right.Size = UDim2.fromScale(1, 1)
+			else
+				right.Visible = false
+				left.Position = UDim2.fromOffset(0, 0)
+				left.Size = UDim2.fromScale(1, 1)
+			end
+		else
+			left.Position = UDim2.fromOffset(0, 0)
+			left.Size = UDim2.new(1, 0, 0.5, -4)
+			right.Position = UDim2.new(0, 0, 0.5, 4)
+			right.Size = UDim2.new(1, 0, 0.5, -4)
 		end
-	end
 
-	if hasFull then
-		full.Visible = true
-		left.Visible = false
-		right.Visible = false
 		for _, section in ipairs(sections) do
-			if section.container and section.container.Parent ~= full then
-				section.container.Parent = full
+			if section.column == "full" then
+				section.column = "left"
+				if section.container and section.container.Parent ~= left then
+					section.container.Parent = left
+				end
 			end
 		end
-		full.Position = UDim2.fromOffset(0, 0)
-		full.Size = UDim2.new(1, 0, 1, 0)
 		return
 	end
 
+	-- DESKTOP:
+	-- Pages are always inside the fixed right content rail.
+	-- Never use AnchorPoint 0.5 here because that can visually drift beneath
+	-- the sidebar when the parent size changes.
+	local GAP = 8
 	full.Visible = false
+
+	-- A single section should use the full available page width.
+	if sectionCount <= 1 then
+		local only = sections[1]
+		left.Visible = false
+		right.Visible = false
+		full.Visible = true
+
+		if only and only.container and only.container.Parent ~= full then
+			only.container.Parent = full
+		end
+
+		full.Position = UDim2.fromOffset(0, 0)
+		full.Size = UDim2.fromScale(1, 1)
+		return
+	end
+
+	-- Multiple sections: strict two-column grid.
 	left.Visible = true
 	right.Visible = true
 
-	if sectionCount <= 1 then
-		local onlySection = sections[1]
-		local onlyColumn = onlySection and onlySection.column or "left"
-		if onlyColumn == "right" then
-			left.Visible = false
-			right.Visible = true
-			right.Position = UDim2.fromOffset(0, 0)
-			right.Size = UDim2.new(1, 0, 1, 0)
-		else
-			left.Visible = true
-			right.Visible = false
-			left.Position = UDim2.fromOffset(0, 0)
-			left.Size = UDim2.new(1, 0, 1, 0)
-		end
-		return
-	end
+	left.Position = UDim2.fromOffset(0, 0)
+	left.Size = UDim2.new(0.5, -(GAP / 2), 1, 0)
 
-	if mobile then
-		left.Size = UDim2.new(1, 0, 0.5, -4)
-		left.Position = UDim2.fromOffset(0, 0)
-		right.Position = UDim2.new(0, 0, 0.5, 4)
-		right.Size = UDim2.new(1, 0, 0.5, -4)
-	else
-		left.Position = UDim2.fromOffset(0, 0)
-		left.Size = UDim2.new(0.5, -4, 1, 0)
-		right.Position = UDim2.new(0.5, 4, 0, 0)
-		right.Size = UDim2.new(0.5, -4, 1, 0)
+	right.Position = UDim2.new(0.5, GAP / 2, 0, 0)
+	right.Size = UDim2.new(0.5, -(GAP / 2), 1, 0)
+
+	-- "full" sections are laid into the left/right grid instead of forcing
+	-- every other section into one huge full column.
+	local nextAutoColumn = "left"
+	for _, section in ipairs(sections) do
+		local targetColumn = section.column
+
+		if targetColumn == "full" then
+			targetColumn = nextAutoColumn
+			nextAutoColumn = (nextAutoColumn == "left") and "right" or "left"
+		end
+
+		local target = targetColumn == "right" and right or left
+		if section.container and section.container.Parent ~= target then
+			section.container.Parent = target
+		end
 	end
 end
 
@@ -1795,6 +1849,12 @@ function Library:_applyResponsiveLayout()
 		self.main.Position = UDim2.fromScale(0.5, 0.5)
 		self.openSize = self.main.Size
 		self.openPosition = self.main.Position
+
+		-- Restore desktop NeverLose rail even if the UI was previously mobile.
+		if self.content then
+			self.content.Position = UDim2.fromOffset(176, 0)
+			self.content.Size = UDim2.new(1, -176, 1, 0)
+		end
 	end
 	for _, page in ipairs(self.pages) do self:_applyPageLayout(page, mobile) end
 	return self
@@ -2168,41 +2228,58 @@ function Library:addPage(data)
 
 	local leftColumn = create("ScrollingFrame", {
 		Name = "LeftScroll", Parent = pageContainer, Active = true,
-		AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.25, 0, 0.5, 0),
-		Size = UDim2.new(0.5, 0, 1, -5), BackgroundTransparency = 1,
-		BorderSizePixel = 0, CanvasSize = UDim2.new(), ScrollBarThickness = 0,
-		ClipsDescendants = true, ZIndex = 22,
+		AnchorPoint = Vector2.new(0, 0),
+		Position = UDim2.fromOffset(0, 0),
+		Size = UDim2.new(0.5, -4, 1, 0),
+		BackgroundTransparency = 1,
+		BorderSizePixel = 0, CanvasSize = UDim2.new(),
+		ScrollBarThickness = 0, ClipsDescendants = true, ZIndex = 22,
 	})
+	padding(leftColumn, 0, 3, 0, 10)
 	local leftLayout = create("UIListLayout", {
-		Parent = leftColumn, HorizontalAlignment = Enum.HorizontalAlignment.Right,
-		SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 5),
+		Parent = leftColumn,
+		HorizontalAlignment = Enum.HorizontalAlignment.Center,
+		SortOrder = Enum.SortOrder.LayoutOrder,
+		Padding = UDim.new(0, 7),
 	})
-	refreshCanvas(leftColumn, leftLayout, 1)
+	refreshCanvas(leftColumn, leftLayout, 12)
 
 	local rightColumn = create("ScrollingFrame", {
 		Name = "RightScroll", Parent = pageContainer, Active = true,
-		AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.75, 0, 0.5, 0),
-		Size = UDim2.new(0.5, 0, 1, -5), BackgroundTransparency = 1,
-		BorderSizePixel = 0, CanvasSize = UDim2.new(), ScrollBarThickness = 0,
-		ClipsDescendants = true, ZIndex = 22,
+		AnchorPoint = Vector2.new(0, 0),
+		Position = UDim2.new(0.5, 4, 0, 0),
+		Size = UDim2.new(0.5, -4, 1, 0),
+		BackgroundTransparency = 1,
+		BorderSizePixel = 0, CanvasSize = UDim2.new(),
+		ScrollBarThickness = 0, ClipsDescendants = true, ZIndex = 22,
 	})
+	padding(rightColumn, 3, 0, 0, 10)
 	local rightLayout = create("UIListLayout", {
-		Parent = rightColumn, SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 5),
+		Parent = rightColumn,
+		HorizontalAlignment = Enum.HorizontalAlignment.Center,
+		SortOrder = Enum.SortOrder.LayoutOrder,
+		Padding = UDim.new(0, 7),
 	})
-	refreshCanvas(rightColumn, rightLayout, 1)
+	refreshCanvas(rightColumn, rightLayout, 12)
 
 	local fullColumn = create("ScrollingFrame", {
 		Name = "FullScroll", Parent = pageContainer, Active = true,
-		AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0.5, 0),
-		Size = UDim2.new(1, 0, 1, -5), BackgroundTransparency = 1,
-		BorderSizePixel = 0, CanvasSize = UDim2.new(), ScrollBarThickness = 0,
-		ClipsDescendants = true, Visible = false, ZIndex = 22,
+		AnchorPoint = Vector2.new(0, 0),
+		Position = UDim2.fromOffset(0, 0),
+		Size = UDim2.fromScale(1, 1),
+		BackgroundTransparency = 1,
+		BorderSizePixel = 0, CanvasSize = UDim2.new(),
+		ScrollBarThickness = 0, ClipsDescendants = true,
+		Visible = false, ZIndex = 22,
 	})
+	padding(fullColumn, 0, 0, 0, 10)
 	local fullLayout = create("UIListLayout", {
-		Parent = fullColumn, HorizontalAlignment = Enum.HorizontalAlignment.Center,
-		SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 5),
+		Parent = fullColumn,
+		HorizontalAlignment = Enum.HorizontalAlignment.Center,
+		SortOrder = Enum.SortOrder.LayoutOrder,
+		Padding = UDim.new(0, 7),
 	})
-	refreshCanvas(fullColumn, fullLayout, 1)
+	refreshCanvas(fullColumn, fullLayout, 12)
 
 	page._columns = { left = leftColumn, right = rightColumn, full = fullColumn }
 	page.container = pageContainer
@@ -2307,7 +2384,21 @@ function Page:addSection(data)
 	section.modules = {}
 
 	local requestedColumn = data.column or data.Column or data.position or data.Position
-	local column = requestedColumn == "left" and "left" or requestedColumn == "right" and "right" or "full"
+	local column
+
+	if requestedColumn == "left" or requestedColumn == "right" or requestedColumn == "full" then
+		column = requestedColumn
+	else
+		-- NeverLose-style automatic section placement:
+		-- first unspecified section goes left, next goes right, then alternates.
+		local leftCount, rightCount = 0, 0
+		for _, existing in ipairs(self.sections) do
+			if existing.column == "left" then leftCount += 1 end
+			if existing.column == "right" then rightCount += 1 end
+		end
+		column = leftCount <= rightCount and "left" or "right"
+	end
+
 	local columnContainer = self._columns[column]
 
 	local card = create("Frame", {
