@@ -1,4 +1,3 @@
-
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
@@ -346,21 +345,15 @@ local THEME_PRESETS = {
 	["Kavo Ocean"] = {
 		Background = Color3.fromRGB(10, 14, 26),
 		Background2 = Color3.fromRGB(14, 19, 34),
-	
 		Sidebar = Color3.fromRGB(16, 22, 39),
 		Topbar = Color3.fromRGB(16, 22, 39),
-	
 		Card = Color3.fromRGB(20, 27, 46),
 		Card2 = Color3.fromRGB(25, 33, 55),
-	
 		Stroke = Color3.fromRGB(39, 49, 74),
-	
 		Accent = Color3.fromRGB(55, 72, 155),
 		AccentDark = Color3.fromRGB(27, 39, 92),
-	
 		Text = Color3.fromRGB(215, 221, 233),
 		Muted = Color3.fromRGB(115, 126, 148),
-	
 		Danger = Color3.fromRGB(225, 72, 90),
 	},
 	["Kavo Midnight"] = {
@@ -634,8 +627,6 @@ local function createLucideIcon(window, parent, iconName, size, properties, them
 		end
 	end
 
-	-- Graceful fallback only if Lucide cannot load in the executor.
-	-- Return an ImageLabel so icon animation code stays type-safe.
 	local fallback = create("ImageLabel", {
 		Parent = parent,
 		BackgroundTransparency = 1,
@@ -825,7 +816,6 @@ function Library.new(data)
 	})
 
 
-	-- Separate NeverLose-style top-screen ping watermark.
 	local pingFrame = create("Frame", {
 		Name = "NeverLosePing", Parent = screenGui,
 		AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -10, 0, 10),
@@ -1190,7 +1180,6 @@ function Library.new(data)
 	local mainStroke = stroke(main, self.theme.Stroke, 0.65, 1)
 	bindTheme(self, mainStroke, "Color", "Stroke")
 
-	-- Transparent left-header drag strip; the right header is also draggable below.
 	local topbar = create("Frame", {
 		Name = "Topbar", Parent = main,
 		Size = UDim2.new(0, 175, 0, 50), BackgroundTransparency = 1,
@@ -1249,7 +1238,6 @@ function Library.new(data)
 	bindTheme(self, headLine, "BackgroundColor3", "Stroke")
 	headLine.BackgroundTransparency = 0.65
 
-	-- Kept for Burbanks' collapse behavior, now rendered with Lucide.
 	local sidebarCollapse = create("TextButton", {
 		Name = "SidebarCollapse", Parent = headFrame,
 		AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -5, 0.5, 0),
@@ -1275,7 +1263,6 @@ function Library.new(data)
 	})
 	refreshCanvas(pageButtons, pageLayout, 1)
 
-	-- Compatibility handle for older Burbanks code. NeverLose does not show a fixed NAVIGATION label.
 	local navigationLabel = createLabel(self, sidebar, "", 1, Enum.Font.GothamMedium)
 	navigationLabel.Visible = false
 	navigationLabel.Size = UDim2.fromOffset(0, 0)
@@ -1337,7 +1324,6 @@ function Library.new(data)
 		if success and avatar.Parent then avatar.Image = thumbnail end
 	end)
 
-	-- The NeverLose right-side menu is a rounded panel with a translucent dark fill.
 	local content = create("Frame", {
 		Name = "RightMenuFrame", Parent = main,
 		Position = UDim2.new(0, 176, 0, 0), Size = UDim2.new(1, -176, 1, 0),
@@ -1355,10 +1341,12 @@ function Library.new(data)
 		BorderSizePixel = 0, ZIndex = 30,
 	})
 
-
-	-- Dedicated page viewport.
-	-- All cards/options are constrained to this frame so they can never
-	-- render underneath the sidebar or header.
+	-- FIX: assign self.pagesHost immediately after creation so addPage()
+	-- always parents tab frames here instead of falling back to self.content.
+	-- The original code assigned self.pagesHost at the bottom of Library.new,
+	-- meaning any page added before that point (first page auto-selected in
+	-- addPage) parented its TabFrame to content with no sidebar offset,
+	-- causing options to render underneath the sidebar.
 	local pagesHost = create("Frame", {
 		Name = "PagesViewport", Parent = content,
 		Position = UDim2.fromOffset(8, 54),
@@ -1368,6 +1356,7 @@ function Library.new(data)
 		ClipsDescendants = true,
 		ZIndex = 20,
 	})
+	self.pagesHost = pagesHost  -- FIXED: assigned immediately, not at end of constructor
 
 	local rightHeaderLine = create("Frame", {
 		Parent = contentHeader, AnchorPoint = Vector2.new(0.5, 1),
@@ -1431,7 +1420,6 @@ function Library.new(data)
 	statusText.Size = UDim2.new(1, -27, 1, 0)
 	statusText.TextTransparency = 0.5
 
-	-- Search copies NeverLose's collapsed 30px icon -> 220px search field behavior.
 	local minimize = create("TextButton", {
 		Parent = contentHeader, AnchorPoint = Vector2.new(1, 0.5),
 		Position = UDim2.new(1, -10, 0.5, 0), Size = UDim2.fromOffset(25, 25),
@@ -1522,7 +1510,6 @@ function Library.new(data)
 		applySearch(searchBox.Text)
 	end)
 
-	-- Hidden compatibility labels retain Burbanks dashboard setter API without adding non-NeverLose chrome.
 	local contentHeaderTitle = createLabel(self, contentHeader, self.dashboardTitle, 1, Enum.Font.GothamMedium)
 	contentHeaderTitle.Visible = false
 	local contentHeaderSub = createLabel(self, contentHeader, self.dashboardSubtitle, 1, Enum.Font.GothamMedium)
@@ -1540,7 +1527,7 @@ function Library.new(data)
 	self.pagesContainer = pageButtons
 	self.content = content
 	self.contentHeader = contentHeader
-	self.pagesHost = pagesHost
+	-- self.pagesHost already assigned above immediately after frame creation
 	self.sidebar = sidebar
 	self.sidebarCollapseButton = sidebarCollapse
 	self.sidebarCollapseIcon = sidebarCollapseIcon
@@ -1983,7 +1970,6 @@ end
 function Library:Notify(data)
 	data = data or {}
 
-	-- NeverLose notification stack: top-right, below the separate ping watermark.
 	if not self._notificationStack or not self._notificationStack.Parent then
 		local notificationStack = create("Frame", {
 			Name = "NeverLoseNotificationStack", Parent = self.container,
@@ -2014,7 +2000,6 @@ function Library:Notify(data)
 		data.icon or data.Icon or data.lucideIcon or data.LucideIcon or "bell"
 	)
 
-	-- NeverLose's container is 65px high for a 55px notification.
 	local containerFrame = create("Frame", {
 		Name = "NotificationContainer", Parent = self._notificationStack,
 		Size = UDim2.fromOffset(0, 65),
@@ -2037,8 +2022,6 @@ function Library:Notify(data)
 	local notifyStroke = stroke(notifyFrame, self.theme.Stroke, 0.650, 1)
 	bindTheme(self, notifyStroke, "Color", "Stroke")
 
-	-- NeverLose has a 35x35 logo on the left; this version uses Lucide,
-	-- so every notification icon remains consistent with the rest of the UI.
 	local iconHolder = create("Frame", {
 		Parent = notifyFrame,
 		AnchorPoint = Vector2.new(0, 0.5),
@@ -2072,7 +2055,6 @@ function Library:Notify(data)
 	content.ZIndex = 173
 	bindTheme(self, content, "TextColor3", "Text")
 
-	-- NeverLose sizes a notification dynamically from the larger text line.
 	local titleSize = TextService:GetTextSize(
 		title.Text, scaledTextSize(17), Enum.Font.GothamBold, Vector2.new(math.huge, math.huge)
 	)
@@ -2083,7 +2065,6 @@ function Library:Notify(data)
 	local finalWidth = math.clamp(mainWidth + 65, 220, 430)
 	notifyFrame.Size = UDim2.fromOffset(finalWidth, 55)
 
-	-- Slide in from the right just like NeverLose.
 	tween(
 		notifyFrame, 0.5,
 		{ Position = UDim2.new(1, 0, 0, 0) },
@@ -2096,7 +2077,6 @@ function Library:Notify(data)
 		closed = true
 		safeCall(data.callback or data.Callback, result)
 
-		-- NeverLose fades the card, stroke, logo and text before removal.
 		tween(notifyFrame, 0.175, { BackgroundTransparency = 1 })
 		tween(notifyStroke, 0.175, { Transparency = 1 })
 		tween(notifyIcon, 0.175, { ImageTransparency = 1 })
@@ -2143,7 +2123,6 @@ function Library:addPage(data)
 	bindTheme(self, background, "BackgroundColor3", "Card2")
 	corner(background, 6)
 
-	-- Compatibility object; NeverLose selection is indicated by row fill + accent icon, not a side stripe.
 	local accent = create("Frame", {
 		Parent = background, Size = UDim2.fromOffset(0, 0),
 		BackgroundTransparency = 1, BorderSizePixel = 0,
