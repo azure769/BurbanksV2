@@ -11,6 +11,8 @@ local TeleportService = game:GetService("TeleportService")
 local LocalPlayer = Players.LocalPlayer
 assert(LocalPlayer, "Burbanks must run on the client.")
 
+local BURBANKS_BUILD = "PROFILE-WORKING-2026-08-23"
+
 -- NeverLose's built-in Roblox icon font. This only changes presentation; Burbanks logic stays untouched.
 local NL_ICON_REGULAR = Font.new(
 	"rbxasset://LuaPackages/Packages/_Index/BuilderIcons/BuilderIcons/BuilderIcons.json",
@@ -398,6 +400,32 @@ local function copyTable(source)
 	return result
 end
 
+
+local function colorToHex(color)
+	if typeof(color) ~= "Color3" then return "#FFFFFF" end
+	return string.format(
+		"#%02X%02X%02X",
+		math.floor(color.R * 255 + 0.5),
+		math.floor(color.G * 255 + 0.5),
+		math.floor(color.B * 255 + 0.5)
+	)
+end
+
+local function hexToColor(value)
+	local hex = tostring(value or ""):gsub("#", ""):gsub("%s+", "")
+	if #hex == 3 then
+		hex = hex:sub(1,1)..hex:sub(1,1)
+			..hex:sub(2,2)..hex:sub(2,2)
+			..hex:sub(3,3)..hex:sub(3,3)
+	end
+	if #hex ~= 6 or not hex:match("^[%x]+$") then return nil end
+	return Color3.fromRGB(
+		tonumber(hex:sub(1,2), 16),
+		tonumber(hex:sub(3,4), 16),
+		tonumber(hex:sub(5,6), 16)
+	)
+end
+
 local function scaledTextSize(value)
 	return math.max(1, math.floor((tonumber(value) or 12) * TEXT_SCALE + 0.5))
 end
@@ -467,21 +495,34 @@ local function guiParent()
 end
 
 local function bindTheme(window, object, property, themeName)
-	if not window or typeof(window) ~= "table" then
-		warn("[Burbanks] bindTheme received an invalid window.")
-		return
+	if typeof(window) ~= "table" then
+		warn("[Burbanks] bindTheme: invalid Library reference")
+		return object
 	end
-	window._themeObjects = window._themeObjects or {}
-	if not window.theme then
-		warn("[Burbanks] bindTheme received a table without theme data.")
-		return
+
+	local registry = rawget(window, "_themeObjects")
+	if typeof(registry) ~= "table" then
+		registry = {}
+		window._themeObjects = registry
 	end
-	window._themeObjects[#window._themeObjects + 1] = {
+
+	local theme = rawget(window, "theme")
+	if typeof(theme) ~= "table" then
+		warn("[Burbanks] bindTheme: Library theme table is missing")
+		return object
+	end
+
+	registry[#registry + 1] = {
 		Object = object,
 		Property = property,
 		Theme = themeName,
 	}
-	object[property] = window.theme[themeName]
+
+	if object and theme[themeName] ~= nil then
+		object[property] = theme[themeName]
+	end
+
+	return object
 end
 
 local function bindThemeRefresh(window, callback)
@@ -663,7 +704,7 @@ local function createBoxedModule(section, height)
 		ClipsDescendants = false,
 	})
 	bindTheme(section.library, holder, "BackgroundColor3", "Card2")
-	corner(holder, 6)
+	corner(holder, 3)
 
 	local rowStroke = stroke(holder, section.library.theme.Stroke, 0.84, 1)
 	bindTheme(section.library, rowStroke, "Color", "Stroke")
@@ -706,7 +747,7 @@ local function createInfoHint(section, parent, infoText, rightInset)
 
 	local tooltip = create("Frame", { Parent = window.container, Visible = false, BorderSizePixel = 0, ZIndex = 500 })
 	bindTheme(window, tooltip, "BackgroundColor3", "Background2")
-	corner(tooltip, 8)
+	corner(tooltip, 5)
 	local tooltipStroke = stroke(tooltip, window.theme.Stroke, 0.15, 1)
 	bindTheme(window, tooltipStroke, "Color", "Accent")
 
@@ -1196,7 +1237,7 @@ function Library.new(data)
 	})
 	bindTheme(self, main, "BackgroundColor3", "Background")
 	main.BackgroundTransparency = 0.055
-	corner(main, 13)
+	corner(main, 8)
 
 	local startupScale = create("UIScale", { Parent = main, Scale = self.uiScale })
 
@@ -1245,7 +1286,7 @@ function Library.new(data)
 		Visible = self.logoImageValue ~= "", ZIndex = 7,
 	})
 	logoImage.ImageColor3 = Color3.fromRGB(255, 255, 255)
-	corner(logoImage, 7)
+	corner(logoImage, 3)
 
 	local logoBox = logoImage
 
@@ -1364,6 +1405,9 @@ function Library.new(data)
 	end)
 
 	-- NeverLose-style profile options popup.
+	-- Explicit Library reference used by every profile helper.
+	local profileWindow = self
+
 	local profilePopup = create("Frame", {
 		Name = "ProfileOptions", Parent = main,
 		AnchorPoint = Vector2.new(0, 1),
@@ -1377,7 +1421,7 @@ function Library.new(data)
 		ZIndex = 140,
 	})
 	bindTheme(self, profilePopup, "BackgroundColor3", "Card")
-	corner(profilePopup, 10)
+	corner(profilePopup, 7)
 	local profilePopupStroke = stroke(profilePopup, self.theme.Stroke, 0.48, 1)
 	bindTheme(self, profilePopupStroke, "Color", "Stroke")
 
@@ -1471,13 +1515,13 @@ function Library.new(data)
 			BorderSizePixel = 0,
 			ZIndex = 142,
 		})
-		bindTheme(self, line, "BackgroundColor3", "Stroke")
+		bindTheme(profileWindow, line, "BackgroundColor3", "Stroke")
 		line.BackgroundTransparency = 0.68
 		return line
 	end
 
 	function UserSettings:AddUserFrame(name, imageValue, expires)
-		local window = self.Library
+		local window = profileWindow
 		if self.UserFrame and self.UserFrame.Root and self.UserFrame.Root.Parent then
 			self.UserFrame.Root:Destroy()
 		end
@@ -1544,6 +1588,7 @@ function Library.new(data)
 	end
 
 	local function createProfileRow(config)
+		local window = profileWindow
 		config = config or {}
 		local row = create("TextButton", {
 			Parent = profilePopupContent,
@@ -1554,10 +1599,10 @@ function Library.new(data)
 			AutoButtonColor = false,
 			ZIndex = 142,
 		})
-		bindTheme(self, row, "BackgroundColor3", "Card2")
-		corner(row, 6)
+		bindTheme(window, row, "BackgroundColor3", "Card2")
+		corner(row, 3)
 
-		local icon = createLucideIcon(self, row, config.Icon or config.icon or "circle", 15, {
+		local icon = createLucideIcon(window, row, config.Icon or config.icon or "circle", 15, {
 			AnchorPoint = Vector2.new(0, 0.5),
 			Position = UDim2.new(0, 9, 0.5, 0),
 			Size = UDim2.fromOffset(15, 15),
@@ -1565,7 +1610,7 @@ function Library.new(data)
 		}, "Muted")
 		icon.ImageTransparency = 0.20
 
-		local label = createLabel(self, row, tostring(config.Name or config.name or "Option"), 11, Enum.Font.GothamMedium)
+		local label = createLabel(window, row, tostring(config.Name or config.name or "Option"), 11, Enum.Font.GothamMedium)
 		label.Position = UDim2.fromOffset(33, 0)
 		label.Size = UDim2.new(1, -70, 1, 0)
 		label.TextTransparency = 0.18
@@ -1588,7 +1633,7 @@ function Library.new(data)
 	end
 
 	function UserSettings:AddButton(config)
-		local window = self.Library
+		local window = profileWindow
 		config = config or {}
 		local callback = config.Callback or config.callback or function() end
 		local row, label = createProfileRow(config)
@@ -1614,7 +1659,7 @@ function Library.new(data)
 	end
 
 	function UserSettings:AddToggle(config)
-		local window = self.Library
+		local window = profileWindow
 		config = config or {}
 		local callback = config.Callback or config.callback or function() end
 		local value = config.Default == true or config.default == true
@@ -1673,7 +1718,7 @@ function Library.new(data)
 	end
 
 	function UserSettings:AddChoice(config)
-		local window = self.Library
+		local window = profileWindow
 		config = config or {}
 		local callback = config.Callback or config.callback or function() end
 		local values = {}
@@ -1713,7 +1758,7 @@ function Library.new(data)
 			ZIndex = 150,
 		})
 		bindTheme(window, choicePopup, "BackgroundColor3", "Card")
-		corner(choicePopup, 8)
+		corner(choicePopup, 5)
 		local choiceStroke = stroke(choicePopup, window.theme.Stroke, 0.48, 1)
 		bindTheme(window, choiceStroke, "Color", "Stroke")
 		padding(choicePopup, 5, 5, 5, 5)
@@ -1741,7 +1786,7 @@ function Library.new(data)
 					ZIndex = 151,
 				})
 				bindTheme(window, option, "BackgroundColor3", "Card2")
-				corner(option, 5)
+				corner(option, 3)
 
 				local optionText = createLabel(window, option, choice, 10, Enum.Font.GothamMedium)
 				optionText.Position = UDim2.fromOffset(8, 0)
@@ -1842,6 +1887,297 @@ function Library.new(data)
 		end,
 	})
 
+
+	-- Built-in Add Theme editor.
+	local addThemeOverlay = create("Frame", {
+		Name = "AddThemeOverlay", Parent = main,
+		Size = UDim2.fromScale(1, 1),
+		BackgroundColor3 = Color3.fromRGB(0, 0, 0),
+		BackgroundTransparency = 0.48,
+		BorderSizePixel = 0,
+		Visible = false,
+		ZIndex = 300,
+	})
+
+	local addThemeCard = create("Frame", {
+		Name = "AddThemeCard", Parent = addThemeOverlay,
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.fromScale(0.5, 0.5),
+		Size = UDim2.fromOffset(470, 388),
+		BorderSizePixel = 0,
+		ZIndex = 301,
+	})
+	bindTheme(profileWindow, addThemeCard, "BackgroundColor3", "Card")
+	addThemeCard.BackgroundTransparency = 0.02
+	corner(addThemeCard, 7)
+	local addThemeStroke = stroke(addThemeCard, profileWindow.theme.Stroke, 0.38, 1)
+	bindTheme(profileWindow, addThemeStroke, "Color", "Stroke")
+
+	local addThemeHeader = create("Frame", {
+		Parent = addThemeCard,
+		Size = UDim2.new(1, 0, 0, 46),
+		BackgroundTransparency = 1,
+		BorderSizePixel = 0,
+		ZIndex = 302,
+	})
+
+	local addThemeIcon = createLucideIcon(profileWindow, addThemeHeader, "palette", 18, {
+		AnchorPoint = Vector2.new(0, 0.5),
+		Position = UDim2.new(0, 14, 0.5, 0),
+		Size = UDim2.fromOffset(18, 18),
+		ZIndex = 303,
+	}, "Accent")
+
+	local addThemeTitle = createLabel(profileWindow, addThemeHeader, "Add Theme", 14, Enum.Font.GothamBold)
+	addThemeTitle.Position = UDim2.fromOffset(43, 0)
+	addThemeTitle.Size = UDim2.new(1, -85, 1, 0)
+	addThemeTitle.TextTransparency = 0.04
+	addThemeTitle.ZIndex = 303
+
+	local addThemeClose = create("TextButton", {
+		Parent = addThemeHeader,
+		AnchorPoint = Vector2.new(1, 0.5),
+		Position = UDim2.new(1, -10, 0.5, 0),
+		Size = UDim2.fromOffset(28, 28),
+		BackgroundTransparency = 1,
+		BorderSizePixel = 0,
+		Text = "",
+		AutoButtonColor = false,
+		ZIndex = 304,
+	})
+	createLucideIcon(profileWindow, addThemeClose, "x", 16, {
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.fromScale(0.5, 0.5),
+		Size = UDim2.fromOffset(16, 16),
+		ZIndex = 305,
+	}, "Muted")
+
+	local addThemeHeaderLine = create("Frame", {
+		Parent = addThemeCard,
+		Position = UDim2.fromOffset(10, 46),
+		Size = UDim2.new(1, -20, 0, 1),
+		BorderSizePixel = 0,
+		ZIndex = 302,
+	})
+	bindTheme(profileWindow, addThemeHeaderLine, "BackgroundColor3", "Stroke")
+	addThemeHeaderLine.BackgroundTransparency = 0.68
+
+	local nameLabel = createLabel(profileWindow, addThemeCard, "THEME NAME", 9, Enum.Font.GothamBold)
+	nameLabel.Position = UDim2.fromOffset(14, 55)
+	nameLabel.Size = UDim2.fromOffset(110, 18)
+	nameLabel.TextTransparency = 0.48
+	nameLabel.ZIndex = 303
+
+	local nameBox = create("TextBox", {
+		Parent = addThemeCard,
+		Position = UDim2.fromOffset(14, 75),
+		Size = UDim2.new(1, -28, 0, 30),
+		BackgroundTransparency = 0.30,
+		BorderSizePixel = 0,
+		Font = Enum.Font.GothamMedium,
+		PlaceholderText = "My Theme",
+		Text = "",
+		TextSize = 11,
+		ClearTextOnFocus = false,
+		TextXAlignment = Enum.TextXAlignment.Left,
+		ZIndex = 303,
+	})
+	bindTheme(profileWindow, nameBox, "BackgroundColor3", "Background2")
+	bindTheme(profileWindow, nameBox, "TextColor3", "Text")
+	bindTheme(profileWindow, nameBox, "PlaceholderColor3", "Muted")
+	corner(nameBox, 3)
+	padding(nameBox, 9, 9, 0, 0)
+
+	local fieldsHost = create("Frame", {
+		Parent = addThemeCard,
+		Position = UDim2.fromOffset(14, 116),
+		Size = UDim2.new(1, -28, 0, 210),
+		BackgroundTransparency = 1,
+		BorderSizePixel = 0,
+		ZIndex = 302,
+	})
+
+	local themeKeys = {
+		"Background", "Background2",
+		"Sidebar", "Topbar",
+		"Card", "Card2",
+		"Stroke", "Accent",
+		"AccentDark", "Text",
+		"Muted", "Danger",
+	}
+
+	local themeInputs = {}
+
+	local function createThemeField(themeName, index)
+		local column = (index - 1) % 2
+		local row = math.floor((index - 1) / 2)
+
+		local holder = create("Frame", {
+			Parent = fieldsHost,
+			Position = UDim2.new(column * 0.5, column == 0 and 0 or 5, 0, row * 34),
+			Size = UDim2.new(0.5, -5, 0, 30),
+			BackgroundTransparency = 1,
+			BorderSizePixel = 0,
+			ZIndex = 303,
+		})
+
+		local label = createLabel(profileWindow, holder, themeName, 9, Enum.Font.GothamMedium)
+		label.Position = UDim2.fromOffset(0, 0)
+		label.Size = UDim2.new(0.48, -4, 1, 0)
+		label.TextTransparency = 0.42
+		label.TextTruncate = Enum.TextTruncate.AtEnd
+		label.ZIndex = 304
+
+		local input = create("TextBox", {
+			Parent = holder,
+			AnchorPoint = Vector2.new(1, 0.5),
+			Position = UDim2.new(1, 0, 0.5, 0),
+			Size = UDim2.new(0.52, 0, 0, 24),
+			BackgroundTransparency = 0.34,
+			BorderSizePixel = 0,
+			Font = Enum.Font.Code,
+			Text = colorToHex(profileWindow.theme[themeName]),
+			TextSize = 10,
+			ClearTextOnFocus = false,
+			TextXAlignment = Enum.TextXAlignment.Center,
+			ZIndex = 304,
+		})
+		bindTheme(profileWindow, input, "BackgroundColor3", "Background2")
+		bindTheme(profileWindow, input, "TextColor3", "Text")
+		corner(input, 2)
+
+		local swatch = create("Frame", {
+			Parent = holder,
+			AnchorPoint = Vector2.new(1, 0.5),
+			Position = UDim2.new(1, -4, 0.5, 0),
+			Size = UDim2.fromOffset(5, 16),
+			BorderSizePixel = 0,
+			BackgroundColor3 = profileWindow.theme[themeName],
+			ZIndex = 305,
+		})
+		corner(swatch, 3)
+
+		input:GetPropertyChangedSignal("Text"):Connect(function()
+			local color = hexToColor(input.Text)
+			if color then
+				swatch.BackgroundColor3 = color
+			end
+		end)
+
+		themeInputs[themeName] = input
+	end
+
+	for index, themeName in ipairs(themeKeys) do
+		createThemeField(themeName, index)
+	end
+
+	local addThemeStatus = createLabel(profileWindow, addThemeCard, "", 9, Enum.Font.GothamMedium)
+	addThemeStatus.Position = UDim2.fromOffset(14, 330)
+	addThemeStatus.Size = UDim2.new(1, -170, 0, 25)
+	addThemeStatus.TextTransparency = 0.30
+	addThemeStatus.ZIndex = 303
+
+	local cancelThemeButton = create("TextButton", {
+		Parent = addThemeCard,
+		AnchorPoint = Vector2.new(1, 1),
+		Position = UDim2.new(1, -112, 1, -12),
+		Size = UDim2.fromOffset(94, 30),
+		BackgroundTransparency = 0.40,
+		BorderSizePixel = 0,
+		Text = "Cancel",
+		Font = Enum.Font.GothamMedium,
+		TextSize = 10,
+		AutoButtonColor = false,
+		ZIndex = 303,
+	})
+	bindTheme(profileWindow, cancelThemeButton, "BackgroundColor3", "Background2")
+	bindTheme(profileWindow, cancelThemeButton, "TextColor3", "Text")
+	corner(cancelThemeButton, 3)
+
+	local saveThemeButton = create("TextButton", {
+		Parent = addThemeCard,
+		AnchorPoint = Vector2.new(1, 1),
+		Position = UDim2.new(1, -12, 1, -12),
+		Size = UDim2.fromOffset(94, 30),
+		BackgroundTransparency = 0,
+		BorderSizePixel = 0,
+		Text = "Save Theme",
+		Font = Enum.Font.GothamBold,
+		TextSize = 10,
+		AutoButtonColor = false,
+		ZIndex = 303,
+	})
+	bindTheme(profileWindow, saveThemeButton, "BackgroundColor3", "Accent")
+	saveThemeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+	corner(saveThemeButton, 3)
+
+	local function resetAddThemeEditor()
+		nameBox.Text = ""
+		addThemeStatus.Text = ""
+		for _, themeName in ipairs(themeKeys) do
+			local input = themeInputs[themeName]
+			if input then
+				input.Text = colorToHex(profileWindow.theme[themeName])
+			end
+		end
+	end
+
+	local function setAddThemeOpen(state)
+		addThemeOverlay.Visible = state == true
+		if state then
+			resetAddThemeEditor()
+			UserSettings:Close()
+		end
+	end
+
+	addThemeClose.MouseButton1Click:Connect(function()
+		setAddThemeOpen(false)
+	end)
+
+	cancelThemeButton.MouseButton1Click:Connect(function()
+		setAddThemeOpen(false)
+	end)
+
+	saveThemeButton.MouseButton1Click:Connect(function()
+		local themeName = tostring(nameBox.Text or ""):match("^%s*(.-)%s*$")
+		if themeName == "" then
+			addThemeStatus.Text = "Enter a theme name."
+			return
+		end
+
+		local newPreset = {}
+		for _, key in ipairs(themeKeys) do
+			local color = hexToColor(themeInputs[key].Text)
+			if not color then
+				addThemeStatus.Text = "Invalid hex for " .. key .. "."
+				return
+			end
+			newPreset[key] = color
+		end
+
+		if profileWindow:AddThemePreset(themeName, newPreset, true) then
+			builtInTheme:SetValues(profileWindow:GetThemePresets())
+			builtInTheme:Set(themeName, false)
+			setAddThemeOpen(false)
+
+			profileWindow:Notify({
+				Title = "Theme Added",
+				Content = themeName .. " was saved and applied.",
+				Icon = "palette",
+				Duration = 3,
+			})
+		end
+	end)
+
+	UserSettings:AddButton({
+		Name = "Add Theme",
+		Icon = "plus",
+		RightIcon = "chevron-right",
+		Callback = function()
+			setAddThemeOpen(true)
+		end,
+	})
+
 	local builtInMode = UserSettings:AddChoice({
 		Name = "UI Mode",
 		Icon = "panels-top-left",
@@ -1922,7 +2258,7 @@ function Library.new(data)
 	})
 	bindTheme(self, content, "BackgroundColor3", "Background")
 	content.BackgroundTransparency = 0.60
-	corner(content, 13)
+	corner(content, 8)
 	local contentStroke = stroke(content, self.theme.Stroke, 0.65, 1)
 	bindTheme(self, contentStroke, "Color", "Stroke")
 
@@ -2004,7 +2340,7 @@ function Library.new(data)
 		Size = UDim2.fromOffset(8, 8), BorderSizePixel = 0,
 	})
 	bindTheme(self, statusDot, "BackgroundColor3", "Accent")
-	corner(statusDot, 8)
+	corner(statusDot, 3)
 
 	local statusText = createLabel(self, status, "CONNECTED", 9, Enum.Font.GothamBold)
 	statusText.Position = UDim2.fromOffset(23, 0)
@@ -2611,6 +2947,26 @@ function Library:setTheme(data, color)
 end
 Library.SetTheme = Library.setTheme
 
+function Library:addThemePreset(name, preset, applyNow)
+	name = tostring(name or ""):match("^%s*(.-)%s*$")
+	if name == "" or typeof(preset) ~= "table" then return false end
+
+	local complete = {}
+	for themeName, fallback in pairs(self.theme) do
+		local value = preset[themeName]
+		complete[themeName] = typeof(value) == "Color3" and value or fallback
+	end
+
+	THEME_PRESETS[name] = complete
+
+	if applyNow == true then
+		self:setThemePreset(name)
+	end
+
+	return true
+end
+Library.AddThemePreset = Library.addThemePreset
+
 function Library:setThemePreset(name)
 	local preset = THEME_PRESETS[tostring(name)]
 	if not preset then return false end
@@ -2702,7 +3058,7 @@ function Library:Notify(data)
 	})
 	bindTheme(self, notifyFrame, "BackgroundColor3", "Card")
 	notifyFrame.BackgroundTransparency = 0.075
-	corner(notifyFrame, 10)
+	corner(notifyFrame, 6)
 
 	local notifyStroke = stroke(notifyFrame, self.theme.Stroke, 0.650, 1)
 	bindTheme(self, notifyStroke, "Color", "Stroke")
@@ -2809,7 +3165,7 @@ function Library:addPage(data)
 		BorderSizePixel = 0, BackgroundTransparency = 1, ZIndex = 63,
 	})
 	bindTheme(self, background, "BackgroundColor3", "Card2")
-	corner(background, 6)
+	corner(background, 3)
 
 	local accent = create("Frame", {
 		Parent = background,
@@ -2819,7 +3175,7 @@ function Library:addPage(data)
 		BorderSizePixel = 0, BackgroundTransparency = 1, ZIndex = 65,
 	})
 	bindTheme(self, accent, "BackgroundColor3", "Accent")
-	corner(accent, 2)
+	corner(accent, 1)
 
 	local iconName = data.icon or data.Icon or data.iconText or data.IconText or "layout-grid"
 	local iconValue = tostring(iconName)
@@ -3071,7 +3427,7 @@ function Page:addSection(data)
 	})
 	bindTheme(self.library, sectionHandler, "BackgroundColor3", "Card")
 	sectionHandler.BackgroundTransparency = 0.68
-	corner(sectionHandler, 10)
+	corner(sectionHandler, 5)
 	local handlerStroke = stroke(sectionHandler, self.library.theme.Stroke, 0.78, 1)
 	bindTheme(self.library, handlerStroke, "Color", "Stroke")
 
@@ -3250,7 +3606,7 @@ function Section:addTextbox(data)
 		Position = UDim2.new(1, -10, 0, 6), Size = UDim2.fromOffset(118, 18), BorderSizePixel = 0,
 	})
 	bindTheme(self.library, holder, "BackgroundColor3", "Background2")
-	corner(holder, 4)
+	corner(holder, 2)
 	local holderStroke = stroke(holder, self.library.theme.Stroke, 0.5, 1)
 	bindTheme(self.library, holderStroke, "Color", "Stroke")
 
@@ -3277,7 +3633,7 @@ function Section:addTextbox(data)
 		})
 		bindTheme(self.library, preview, "BackgroundColor3", "Background2")
 		preview.BackgroundTransparency = 0.15
-		corner(preview, 8)
+		corner(preview, 3)
 		local previewStroke = stroke(preview, self.library.theme.Stroke, 0.45, 1)
 		bindTheme(self.library, previewStroke, "Color", "Stroke")
 
@@ -3468,7 +3824,7 @@ function Section:addSlider(data)
 		BorderSizePixel = 0,
 	})
 	bindTheme(self.library, valueFrame, "BackgroundColor3", "Card2")
-	corner(valueFrame, 4)
+	corner(valueFrame, 2)
 	local valueStroke = stroke(valueFrame, self.library.theme.Stroke, 0.65, 1)
 	bindTheme(self.library, valueStroke, "Color", "Stroke")
 
@@ -3575,7 +3931,7 @@ function Section:addKeybind(data)
 	bindTheme(self.library, keyBox, "BackgroundColor3", "Card2")
 	bindTheme(self.library, keyBox, "TextColor3", "Text")
 	keyBox.TextTransparency = 0.5
-	corner(keyBox, 4)
+	corner(keyBox, 2)
 	local keyStroke = stroke(keyBox, self.library.theme.Stroke, 0.65, 1)
 	bindTheme(self.library, keyStroke, "Color", "Stroke")
 
@@ -3648,7 +4004,7 @@ local function createDropdownPopup(section, selectBox, hasSearch)
 		ZIndex = 420,
 	})
 	bindTheme(window, popup, "BackgroundColor3", "Card")
-	corner(popup, 8)
+	corner(popup, 5)
 	local popupStroke = stroke(popup, window.theme.Stroke, 0.45, 1)
 	bindTheme(window, popupStroke, "Color", "Stroke")
 
@@ -3675,7 +4031,7 @@ local function createDropdownPopup(section, selectBox, hasSearch)
 		bindTheme(window, search, "TextColor3", "Text")
 		bindTheme(window, search, "PlaceholderColor3", "Muted")
 		search.TextTransparency = 0.15
-		corner(search, 5)
+		corner(search, 3)
 		padding(search, 9, 8, 0, 0)
 		listY = 43
 		listHeight = 125
@@ -3761,7 +4117,7 @@ function Section:addDropdown(data)
 	})
 	bindTheme(self.library, selectBox, "BackgroundColor3", "Background2")
 	selectBox.BackgroundTransparency = 0.28
-	corner(selectBox, 5)
+	corner(selectBox, 3)
 	local selectStroke = stroke(selectBox, self.library.theme.Stroke, 0.58, 1)
 	bindTheme(self.library, selectStroke, "Color", "Stroke")
 
@@ -3828,7 +4184,7 @@ function Section:addDropdown(data)
 					ZIndex = 423,
 				})
 				bindTheme(self.library, entry, "BackgroundColor3", "Card2")
-				corner(entry, 5)
+				corner(entry, 3)
 
 				local entryText = createLabel(self.library, entry, value, 11, Enum.Font.GothamMedium)
 				entryText.Position = UDim2.fromOffset(9, 0)
@@ -3965,7 +4321,7 @@ function Section:addMultiDropdown(data)
 	})
 	bindTheme(self.library, selectBox, "BackgroundColor3", "Background2")
 	selectBox.BackgroundTransparency = 0.28
-	corner(selectBox, 5)
+	corner(selectBox, 3)
 	local selectStroke = stroke(selectBox, self.library.theme.Stroke, 0.58, 1)
 	bindTheme(self.library, selectStroke, "Color", "Stroke")
 
@@ -4043,7 +4399,7 @@ function Section:addMultiDropdown(data)
 					ZIndex = 423,
 				})
 				bindTheme(self.library, entry, "BackgroundColor3", "Card2")
-				corner(entry, 5)
+				corner(entry, 3)
 
 				local checkBox = create("Frame", {
 					Parent = entry,
@@ -4055,7 +4411,7 @@ function Section:addMultiDropdown(data)
 					ZIndex = 424,
 				})
 				bindTheme(self.library, checkBox, "BackgroundColor3", isSelected and "Accent" or "Background2")
-				corner(checkBox, 4)
+				corner(checkBox, 2)
 
 				if isSelected then
 					local check = createLucideIcon(self.library, checkBox, "check", 11, {
@@ -4276,13 +4632,13 @@ function Section:addColorPicker(data)
 		Size = UDim2.new(1, 0, 0, 7), BorderSizePixel = 0,
 	})
 	bindTheme(self.library, slider, "BackgroundColor3", "Background2")
-	corner(slider, 6)
+	corner(slider, 3)
 
 	local fill = create("Frame", {
 		Parent = slider, Size = UDim2.new(options.transparency, 0, 1, 0), BorderSizePixel = 0,
 	})
 	bindTheme(self.library, fill, "BackgroundColor3", "Accent")
-	corner(fill, 6)
+	corner(fill, 3)
 
 	local knob = create("Frame", {
 		Parent = slider, AnchorPoint = Vector2.new(0.5, 0.5),
@@ -4290,7 +4646,7 @@ function Section:addColorPicker(data)
 		Size = UDim2.fromOffset(13, 13), BorderSizePixel = 0,
 	})
 	bindTheme(self.library, knob, "BackgroundColor3", "Text")
-	corner(knob, 7)
+	corner(knob, 3)
 	local knobStroke = stroke(knob, self.library.theme.Stroke, 0.15, 1)
 	bindTheme(self.library, knobStroke, "Color", "Stroke")
 
