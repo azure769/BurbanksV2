@@ -1081,7 +1081,7 @@ function Library.new(data)
 		corner(keyCard, 14)
 		local keyStroke = stroke(keyCard, self.theme.Stroke, 0.65, 1)
 		bindTheme(self, keyStroke, "Color", "Stroke")
-		keyCardScale = create("UIScale", { Parent = keyCard, Scale = 0.96 })
+		keyCardScale = create("UIScale", { Parent = keyCard, Scale = math.max(0.55, self.uiScale * 0.96) })
 
 		local keyLogoHolder = create("Frame", {
 			Parent = keyCard, Position = UDim2.fromOffset(18, 18),
@@ -1119,6 +1119,13 @@ function Library.new(data)
 		bindTheme(self, keySubtitleLabel, "TextColor3", "Muted")
 		keySubtitleLabel.TextTransparency = 0.35
 
+		local keyHeaderLine = create("Frame", {
+			Parent = keyCard, Position = UDim2.fromOffset(18, 70),
+			Size = UDim2.new(1, -36, 0, 1), BorderSizePixel = 0, ZIndex = 302,
+		})
+		bindTheme(self, keyHeaderLine, "BackgroundColor3", "Stroke")
+		keyHeaderLine.BackgroundTransparency = 0.58
+
 		local keyDescriptionLabel = createLabel(self, keyCard, self.keyDescription, 10, Enum.Font.Gotham)
 		keyDescriptionLabel.Position = UDim2.fromOffset(18, 80)
 		keyDescriptionLabel.Size = UDim2.new(1, -36, 0, 18)
@@ -1131,7 +1138,7 @@ function Library.new(data)
 			Size = UDim2.new(1, -36, 0, 42), BorderSizePixel = 0, ZIndex = 302,
 		})
 		bindTheme(self, inputHolder, "BackgroundColor3", "Card")
-		corner(inputHolder, 9)
+		corner(inputHolder, 11)
 		local inputStroke = stroke(inputHolder, self.theme.Stroke, 0.45, 1)
 		bindTheme(self, inputStroke, "Color", "Stroke")
 
@@ -1144,7 +1151,7 @@ function Library.new(data)
 		})
 		bindTheme(self, keyInput, "TextColor3", "Text")
 		bindTheme(self, keyInput, "PlaceholderColor3", "Muted")
-		corner(keyInput, 9)
+		corner(keyInput, 11)
 
 		local verifyButton = create("TextButton", {
 			Parent = keyCard, Position = UDim2.fromOffset(18, 162),
@@ -1154,7 +1161,29 @@ function Library.new(data)
 		})
 		bindTheme(self, verifyButton, "BackgroundColor3", "AccentDark")
 		bindTheme(self, verifyButton, "TextColor3", "Text")
-		corner(verifyButton, 9)
+		corner(verifyButton, 11)
+
+		local function wireKeyButton(button)
+			local restingSize = button.Size
+			local pressed = false
+			button.MouseEnter:Connect(function()
+				if not pressed then tween(button, 0.12, { BackgroundTransparency = 0.08 }) end
+			end)
+			button.MouseButton1Down:Connect(function()
+				pressed = true
+				tween(button, 0.08, {
+					Size = UDim2.new(restingSize.X.Scale, restingSize.X.Offset - 4, restingSize.Y.Scale, restingSize.Y.Offset - 2),
+					BackgroundTransparency = 0.14,
+				})
+			end)
+			local function restore()
+				pressed = false
+				tween(button, 0.11, { Size = restingSize, BackgroundTransparency = 0 })
+			end
+			button.MouseButton1Up:Connect(restore)
+			button.MouseLeave:Connect(restore)
+		end
+		wireKeyButton(verifyButton)
 
 		if self.keyGetUrl ~= "" then
 			local getKeyButton = create("TextButton", {
@@ -1165,9 +1194,10 @@ function Library.new(data)
 			})
 			bindTheme(self, getKeyButton, "BackgroundColor3", "Card2")
 			bindTheme(self, getKeyButton, "TextColor3", "Text")
-			corner(getKeyButton, 9)
+			corner(getKeyButton, 11)
 			local getKeyStroke = stroke(getKeyButton, self.theme.Stroke, 0.45, 1)
 			bindTheme(self, getKeyStroke, "Color", "Stroke")
+			wireKeyButton(getKeyButton)
 			getKeyButton.MouseButton1Click:Connect(function()
 				if typeof(setclipboard) == "function" then pcall(setclipboard, self.keyGetUrl) end
 				if keyStatus then
@@ -1186,6 +1216,7 @@ function Library.new(data)
 
 		self.keyOverlay = keyOverlay
 		self.keyCard = keyCard
+		self.keyCardScale = keyCardScale
 		self.keyInput = keyInput
 		self.keyStatus = keyStatus
 		self.keyVerified = false
@@ -1229,7 +1260,7 @@ function Library.new(data)
 				rememberKey(candidate)
 				keyStatus.Text = "Access granted."
 				bindTheme(self, keyStatus, "TextColor3", "Accent")
-				tween(keyCardScale, 0.2, { Scale = 0.94 }, Enum.EasingStyle.Quart, Enum.EasingDirection.In)
+				tween(keyCardScale, 0.2, { Scale = math.max(0.55, self.uiScale * 0.94) }, Enum.EasingStyle.Quart, Enum.EasingDirection.In)
 				task.wait(0.16)
 				if keyOverlay and keyOverlay.Parent then keyOverlay:Destroy() end
 				animateMainFromKey()
@@ -1390,11 +1421,11 @@ function Library.new(data)
 
 	local playerProfileDivider = create("Frame", {
 		Name = "PlayerProfileDivider", Parent = sidebar,
-		AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 1, -50),
-		Size = UDim2.new(1, -10, 0, 1), BorderSizePixel = 0, ZIndex = 5,
+		AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 1, -51),
+		Size = UDim2.new(1, -16, 0, 1), BorderSizePixel = 0, ZIndex = 70,
 	})
 	bindTheme(self, playerProfileDivider, "BackgroundColor3", "Stroke")
-	playerProfileDivider.BackgroundTransparency = 0.65
+	playerProfileDivider.BackgroundTransparency = 0.52
 
 	local playerProfile = create("Frame", {
 		Name = "PlayerProfile", Parent = sidebar,
@@ -2219,6 +2250,7 @@ function Library.new(data)
 		end,
 	})
 
+	local builtInCompact
 	local builtInMode = UserSettings:AddChoice({
 		Name = "UI Mode",
 		Icon = "panels-top-left",
@@ -2233,6 +2265,10 @@ function Library.new(data)
 			else
 				self:SetMobileMode(false)
 				self:SetSidebarCollapsed(false)
+			end
+
+			if builtInCompact and builtInCompact.Set then
+				builtInCompact:Set(self.sidebarCollapsed, false)
 			end
 		end,
 	})
@@ -2253,7 +2289,7 @@ function Library.new(data)
 		end,
 	})
 
-	local builtInCompact = UserSettings:AddToggle({
+	builtInCompact = UserSettings:AddToggle({
 		Name = "Compact Sidebar",
 		Icon = "panel-left-close",
 		Default = self.sidebarCollapsed,
@@ -2581,8 +2617,8 @@ function Library.new(data)
 				if keyOverlay and keyOverlay.Parent then
 					keyOverlay.Visible = true
 					if keyCardScale then
-						keyCardScale.Scale = 0.94
-						tween(keyCardScale, 0.28, { Scale = 1 }, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
+						keyCardScale.Scale = math.max(0.55, self.uiScale * 0.94)
+						tween(keyCardScale, 0.28, { Scale = self.uiScale }, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
 					end
 				end
 				return
@@ -2635,6 +2671,7 @@ function Library:ShowKeySystem()
 		self.main.Visible = false
 		self.keyOverlay.Visible = true
 		if self.keyCard then self.keyCard.Position = UDim2.fromScale(0.5, 0.5) end
+		if self.keyCardScale then self.keyCardScale.Scale = self.uiScale end
 	end
 	return self
 end
@@ -2642,7 +2679,19 @@ Library.showKeySystem = Library.ShowKeySystem
 
 function Library:SetScale(value)
 	self.uiScale = math.clamp(tonumber(value) or self.uiScale or 1, 0.55, 1.35)
-	if self.startupScale then tween(self.startupScale, 0.16, { Scale = self.uiScale }) end
+
+	-- Apply directly to the single root UIScale so the main UI AND profile popup
+	-- always use the exact selected scale. Direct assignment avoids a stale tween
+	-- being overwritten by a mode/sidebar animation.
+	if self.startupScale then
+		self.startupScale.Scale = self.uiScale
+	end
+
+	-- The key system is a separate overlay, so keep it on the same scale too.
+	if self.keyCardScale and self.keyCardScale.Parent then
+		self.keyCardScale.Scale = self.uiScale
+	end
+
 	return self
 end
 Library.setScale = Library.SetScale
@@ -2684,7 +2733,14 @@ function Library:SetSidebarCollapsed(state)
 
 	if self.navigationLabel then self.navigationLabel.Visible = false end
 	if self.playerProfile then self.playerProfile.Visible = not self.sidebarCollapsed end
-	if self.playerProfileDivider then self.playerProfileDivider.Visible = not self.sidebarCollapsed end
+	if self.playerProfileDivider then
+		-- Re-assert the divider every toggle so the little line above the profile
+		-- card cannot disappear after compact -> expanded transitions.
+		self.playerProfileDivider.Position = UDim2.new(0.5, 0, 1, -51)
+		self.playerProfileDivider.Size = UDim2.new(1, -16, 0, 1)
+		self.playerProfileDivider.Visible = not self.sidebarCollapsed
+		self.playerProfileDivider.BackgroundTransparency = self.sidebarCollapsed and 1 or 0.52
+	end
 	if self.sidebarCollapseIcon then
 		tween(self.sidebarCollapseIcon, 0.18, { Rotation = self.sidebarCollapsed and 180 or 0 })
 	end
@@ -2868,8 +2924,37 @@ end
 function Library:SetMobileMode(enabled)
 	self.autoResponsive = false
 	self._mobileMode = enabled == true
-	if self._mobileMode then self:SetSidebarCollapsed(true) end
-	for _, page in ipairs(self.pages) do self:_applyPageLayout(page, self._mobileMode) end
+
+	if not self.main then return self end
+
+	if self._mobileMode then
+		-- Mobile is a REAL size preset, not only a page-layout flag.
+		local camera = workspace.CurrentCamera
+		local viewport = camera and camera.ViewportSize or Vector2.new(1280, 720)
+		local width = math.clamp(viewport.X - 28, 320, 430)
+		local height = math.clamp(viewport.Y - 36, 390, 540)
+
+		-- Set the flag first so SetSidebarCollapsed does not overwrite the
+		-- mobile window dimensions with desktop compact dimensions.
+		self.sidebarCollapsed = true
+		self.main.Size = UDim2.fromOffset(width, height)
+		self.main.Position = UDim2.fromScale(0.5, 0.5)
+		self.openSize = self.main.Size
+		self.openPosition = self.main.Position
+		self:SetSidebarCollapsed(true)
+	else
+		-- Return to the correct desktop preset based on the current compact state.
+		local targetWidth = self.sidebarCollapsed and 643 or 760
+		self.main.Size = UDim2.fromOffset(targetWidth, 500)
+		self.main.Position = UDim2.fromScale(0.5, 0.5)
+		self.openSize = self.main.Size
+		self.openPosition = self.main.Position
+		self:SetSidebarCollapsed(self.sidebarCollapsed)
+	end
+
+	for _, page in ipairs(self.pages) do
+		self:_applyPageLayout(page, self._mobileMode)
+	end
 	return self
 end
 Library.setMobileMode = Library.SetMobileMode
