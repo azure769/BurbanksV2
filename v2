@@ -1,4 +1,6 @@
 
+
+
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
@@ -4942,6 +4944,42 @@ function Section:addMultiDropdown(data)
 	return controller
 end
 Section.AddMultiDropdown = Section.addMultiDropdown
+
+-- Theme selector compatibility method.
+-- Restores Section:addTheme({...}), Section:AddTheme({...}),
+-- and the explicit addThemeSelector aliases used by older Burbanks clients.
+function Section:addThemeSelector(data)
+	data = data or {}
+
+	local defaultTheme = tostring(
+		data.default
+		or data.Default
+		or self.library.currentThemePreset
+		or "Walled Waves"
+	)
+
+	if not THEME_PRESETS[defaultTheme] then
+		defaultTheme = "Walled Waves"
+	end
+
+	self.library.currentThemePreset = defaultTheme
+	self.library:setThemePreset(defaultTheme)
+
+	return self:addDropdown({
+		title = tostring(data.title or data.Title or "Theme"),
+		list = self.library:getThemePresets(),
+		default = defaultTheme,
+		info = getInfoText(data),
+
+		callback = function(selectedTheme)
+			self.library:setThemePreset(selectedTheme)
+			safeCall(data.callback or data.Callback, selectedTheme)
+		end,
+	})
+end
+Section.AddThemeSelector = Section.addThemeSelector
+Section.addTheme = Section.addThemeSelector
+Section.AddTheme = Section.addThemeSelector
 
 function Section:addColorPicker(data)
 	data = data or {}
