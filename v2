@@ -984,11 +984,11 @@ function Library.new(data)
 
 	local startupOverlay, startupCard, startupCardScale, startupLogo
 	local startupTitleLabel, startupSubtitleLabel, startupStatusLabel
-	local startupProgress, startupProgressFill, startupBlur
+	local startupProgress, startupProgressFill, startupBlur, startupStatusPill
 
 	if self.startupMenu then
 		startupBlur = create("BlurEffect", { Name = "BurbanksStartupBlur", Parent = game:GetService("Lighting"), Size = 0 })
-		tween(startupBlur, 0.3, { Size = 18 }, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
+		tween(startupBlur, 0.3, { Size = 16 }, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
 
 		startupOverlay = create("Frame", {
 			Name = "StartupOverlay", Parent = screenGui,
@@ -997,73 +997,121 @@ function Library.new(data)
 
 		startupCard = create("Frame", {
 			Name = "StartupCard", Parent = startupOverlay,
-			AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5),
-			Size = UDim2.fromOffset(370, 205), BorderSizePixel = 0, ZIndex = 201,
+			AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0.5, 10),
+			Size = UDim2.fromOffset(420, 232), BorderSizePixel = 0, ZIndex = 201,
 		})
 		bindTheme(self, startupCard, "BackgroundColor3", "Background")
-		corner(startupCard, 14)
-		local startupCardStroke = stroke(startupCard, self.theme.Stroke, 0.35, 1)
+		startupCard.BackgroundTransparency = 0.025
+		corner(startupCard, 16)
+		local startupCardStroke = stroke(startupCard, self.theme.Stroke, 0.28, 1)
 		bindTheme(self, startupCardStroke, "Color", "Stroke")
-		startupCardScale = create("UIScale", { Parent = startupCard, Scale = 0.92 })
+		startupCardScale = create("UIScale", { Parent = startupCard, Scale = 0.88 })
+
+		local startupAccent = create("Frame", {
+			Parent = startupCard, Position = UDim2.fromOffset(16, 0),
+			Size = UDim2.new(1, -32, 0, 3), BorderSizePixel = 0, ZIndex = 202,
+		})
+		bindTheme(self, startupAccent, "BackgroundColor3", "Accent")
+		corner(startupAccent, 3)
+		startupAccent.BackgroundTransparency = 0.08
 
 		local logoHolder = create("Frame", {
-			Parent = startupCard, AnchorPoint = Vector2.new(0.5, 0),
-			Position = UDim2.new(0.5, 0, 0, 22), Size = UDim2.fromOffset(66, 66),
+			Parent = startupCard,
+			Position = UDim2.fromOffset(22, 24), Size = UDim2.fromOffset(58, 58),
 			BorderSizePixel = 0, ZIndex = 202,
 		})
 		bindTheme(self, logoHolder, "BackgroundColor3", "Card")
-		corner(logoHolder, 16)
-		local logoHolderStroke = stroke(logoHolder, self.theme.Stroke, 0.35, 1)
+		logoHolder.BackgroundTransparency = 0.15
+		corner(logoHolder, 14)
+		local logoHolderStroke = stroke(logoHolder, self.theme.Stroke, 0.34, 1)
 		bindTheme(self, logoHolderStroke, "Color", "Stroke")
 
 		startupLogo = create("ImageLabel", {
-			Parent = logoHolder, Size = UDim2.fromScale(1, 1),
+			Parent = logoHolder, Position = UDim2.fromOffset(6, 6), Size = UDim2.new(1, -12, 1, -12),
 			BackgroundTransparency = 1, Image = self.logoImageValue,
-			ImageTransparency = 1, ScaleType = Enum.ScaleType.Crop, ZIndex = 203,
+			ImageTransparency = 1, ScaleType = Enum.ScaleType.Fit, ZIndex = 203,
 		})
 		startupLogo.ImageColor3 = Color3.fromRGB(255, 255, 255)
-		corner(startupLogo, 16)
+		corner(startupLogo, 10)
 		self.startupLogo = startupLogo
 
-		startupTitleLabel = createLabel(self, startupCard, self.startupTitle, 18, Enum.Font.GothamBold)
-		startupTitleLabel.AnchorPoint = Vector2.new(0.5, 0)
-		startupTitleLabel.Position = UDim2.new(0.5, 0, 0, 98)
-		startupTitleLabel.Size = UDim2.new(1, -36, 0, 24)
-		startupTitleLabel.TextXAlignment = Enum.TextXAlignment.Center
+		local startupLogoText = createLabel(self, logoHolder, self.logoTextValue, 20, Enum.Font.GothamBold)
+		startupLogoText.Size = UDim2.fromScale(1, 1)
+		startupLogoText.TextXAlignment = Enum.TextXAlignment.Center
+		startupLogoText.Visible = self.logoImageValue == ""
+		startupLogoText.TextTransparency = 1
+		startupLogoText.ZIndex = 203
+		bindTheme(self, startupLogoText, "TextColor3", "Accent")
+
+		startupTitleLabel = createLabel(self, startupCard, self.startupTitle, 19, Enum.Font.GothamBold)
+		startupTitleLabel.Position = UDim2.fromOffset(96, 28)
+		startupTitleLabel.Size = UDim2.new(1, -118, 0, 25)
 		startupTitleLabel.TextTransparency = 1
 		startupTitleLabel.ZIndex = 203
 
 		startupSubtitleLabel = createLabel(self, startupCard, self.startupSubtitle, 10, Enum.Font.GothamMedium)
-		startupSubtitleLabel.AnchorPoint = Vector2.new(0.5, 0)
-		startupSubtitleLabel.Position = UDim2.new(0.5, 0, 0, 123)
-		startupSubtitleLabel.Size = UDim2.new(1, -36, 0, 18)
-		startupSubtitleLabel.TextXAlignment = Enum.TextXAlignment.Center
+		startupSubtitleLabel.Position = UDim2.fromOffset(96, 53)
+		startupSubtitleLabel.Size = UDim2.new(1, -118, 0, 18)
 		startupSubtitleLabel.TextTransparency = 1
 		startupSubtitleLabel.ZIndex = 203
 		bindTheme(self, startupSubtitleLabel, "TextColor3", "Muted")
 
-		startupStatusLabel = createLabel(self, startupCard, self.startupVersion, 9, Enum.Font.Gotham)
-		startupStatusLabel.AnchorPoint = Vector2.new(0.5, 0)
-		startupStatusLabel.Position = UDim2.new(0.5, 0, 0, 154)
-		startupStatusLabel.Size = UDim2.new(1, -48, 0, 16)
-		startupStatusLabel.TextXAlignment = Enum.TextXAlignment.Center
+		startupStatusPill = create("Frame", {
+			Parent = startupCard, Position = UDim2.fromOffset(22, 104),
+			Size = UDim2.new(1, -44, 0, 42), BorderSizePixel = 0, ZIndex = 202,
+		})
+		bindTheme(self, startupStatusPill, "BackgroundColor3", "Card")
+		startupStatusPill.BackgroundTransparency = 0.28
+		corner(startupStatusPill, 11)
+		local statusPillStroke = stroke(startupStatusPill, self.theme.Stroke, 0.65, 1)
+		bindTheme(self, statusPillStroke, "Color", "Stroke")
+
+		local loadingIcon = createLucideIcon(self, startupStatusPill, "loader-circle", 16, {
+			AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 12, 0.5, 0),
+			Size = UDim2.fromOffset(16, 16), ZIndex = 204,
+		}, "Accent")
+		loadingIcon.ImageTransparency = 0.05
+
+		startupStatusLabel = createLabel(self, startupStatusPill, self.startupVersion, 10, Enum.Font.GothamMedium)
+		startupStatusLabel.Position = UDim2.fromOffset(38, 0)
+		startupStatusLabel.Size = UDim2.new(1, -50, 1, 0)
 		startupStatusLabel.TextTransparency = 1
 		startupStatusLabel.ZIndex = 203
 		bindTheme(self, startupStatusLabel, "TextColor3", "Muted")
 
+		local progressLabel = createLabel(self, startupCard, "INITIALIZING", 8, Enum.Font.GothamBold)
+		progressLabel.Position = UDim2.fromOffset(22, 160)
+		progressLabel.Size = UDim2.new(1, -44, 0, 15)
+		progressLabel.TextTransparency = 0.52
+		progressLabel.ZIndex = 203
+		bindTheme(self, progressLabel, "TextColor3", "Muted")
+
 		startupProgress = create("Frame", {
-			Parent = startupCard, AnchorPoint = Vector2.new(0.5, 0),
-			Position = UDim2.new(0.5, 0, 0, 180), Size = UDim2.new(1, -48, 0, 4),
+			Parent = startupCard,
+			Position = UDim2.fromOffset(22, 183), Size = UDim2.new(1, -44, 0, 7),
 			BorderSizePixel = 0, ZIndex = 202,
 		})
 		bindTheme(self, startupProgress, "BackgroundColor3", "Card2")
-		corner(startupProgress, 4)
+		startupProgress.BackgroundTransparency = 0.12
+		corner(startupProgress, 7)
 
 		startupProgressFill = create("Frame", {
 			Parent = startupProgress, Size = UDim2.new(0, 0, 1, 0), BorderSizePixel = 0, ZIndex = 203,
 		})
 		bindTheme(self, startupProgressFill, "BackgroundColor3", "Accent")
-		corner(startupProgressFill, 4)
+		corner(startupProgressFill, 7)
+
+		local footer = createLabel(self, startupCard, "BURBANKS  •  PRIVATE BUILD", 8, Enum.Font.GothamMedium)
+		footer.AnchorPoint = Vector2.new(0.5, 0)
+		footer.Position = UDim2.new(0.5, 0, 0, 202)
+		footer.Size = UDim2.new(1, -44, 0, 14)
+		footer.TextXAlignment = Enum.TextXAlignment.Center
+		footer.TextTransparency = 0.62
+		footer.ZIndex = 203
+		bindTheme(self, footer, "TextColor3", "Muted")
+
+		-- Keep a reference so the startup animation can fade the text fallback too.
+		self.startupLogoText = startupLogoText
 	end
 
 	local keyOverlay, keyCard, keyCardScale, keyInput, keyStatus
@@ -1077,31 +1125,41 @@ function Library.new(data)
 
 		keyCard = create("Frame", {
 			Name = "KeySystemCard", Parent = keyOverlay,
-			AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5),
-			Size = UDim2.fromOffset(390, 250), BorderSizePixel = 0, ZIndex = 301,
+			AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0.5, 10),
+			Size = UDim2.fromOffset(438, 318), BorderSizePixel = 0, ZIndex = 301,
 		})
 		bindTheme(self, keyCard, "BackgroundColor3", "Background")
-		corner(keyCard, 14)
-		local keyStroke = stroke(keyCard, self.theme.Stroke, 0.65, 1)
+		keyCard.BackgroundTransparency = 0.025
+		corner(keyCard, 16)
+		local keyStroke = stroke(keyCard, self.theme.Stroke, 0.28, 1)
 		bindTheme(self, keyStroke, "Color", "Stroke")
-		keyCardScale = create("UIScale", { Parent = keyCard, Scale = math.max(0.55, self.uiScale * 0.96) })
+		keyCardScale = create("UIScale", { Parent = keyCard, Scale = math.max(0.55, self.uiScale * 0.94) })
+
+		local keyAccent = create("Frame", {
+			Parent = keyCard, Position = UDim2.fromOffset(16, 0),
+			Size = UDim2.new(1, -32, 0, 3), BorderSizePixel = 0, ZIndex = 302,
+		})
+		bindTheme(self, keyAccent, "BackgroundColor3", "Accent")
+		corner(keyAccent, 3)
+		keyAccent.BackgroundTransparency = 0.08
 
 		local keyLogoHolder = create("Frame", {
-			Parent = keyCard, Position = UDim2.fromOffset(18, 18),
-			Size = UDim2.fromOffset(48, 48), BorderSizePixel = 0, ZIndex = 302,
+			Parent = keyCard, Position = UDim2.fromOffset(20, 22),
+			Size = UDim2.fromOffset(54, 54), BorderSizePixel = 0, ZIndex = 302,
 		})
 		bindTheme(self, keyLogoHolder, "BackgroundColor3", "Card")
-		corner(keyLogoHolder, 11)
-		local keyLogoStroke = stroke(keyLogoHolder, self.theme.Stroke, 0.25, 1)
-		bindTheme(self, keyLogoStroke, "Color", "Accent")
+		keyLogoHolder.BackgroundTransparency = 0.14
+		corner(keyLogoHolder, 13)
+		local keyLogoStroke = stroke(keyLogoHolder, self.theme.Stroke, 0.34, 1)
+		bindTheme(self, keyLogoStroke, "Color", "Stroke")
 
 		local keyLogo = create("ImageLabel", {
-			Parent = keyLogoHolder, Size = UDim2.fromScale(1, 1),
+			Parent = keyLogoHolder, Position = UDim2.fromOffset(6, 6), Size = UDim2.new(1, -12, 1, -12),
 			BackgroundTransparency = 1, Image = self.logoImageValue,
-			ScaleType = Enum.ScaleType.Crop, Visible = self.logoImageValue ~= "", ZIndex = 303,
+			ScaleType = Enum.ScaleType.Fit, Visible = self.logoImageValue ~= "", ZIndex = 303,
 		})
 		keyLogo.ImageColor3 = Color3.fromRGB(255, 255, 255)
-		corner(keyLogo, 11)
+		corner(keyLogo, 9)
 
 		local keyLogoText = createLabel(self, keyLogoHolder, self.logoTextValue, 18, Enum.Font.GothamBold)
 		keyLogoText.Size = UDim2.fromScale(1, 1)
@@ -1110,73 +1168,126 @@ function Library.new(data)
 		keyLogoText.ZIndex = 303
 		bindTheme(self, keyLogoText, "TextColor3", "Accent")
 
-		local keyTitleLabel = createLabel(self, keyCard, self.keyTitle, 16, Enum.Font.GothamBold)
-		keyTitleLabel.Position = UDim2.fromOffset(78, 17)
-		keyTitleLabel.Size = UDim2.new(1, -96, 0, 24)
+		local keyTitleLabel = createLabel(self, keyCard, self.keyTitle, 17, Enum.Font.GothamBold)
+		keyTitleLabel.Position = UDim2.fromOffset(90, 24)
+		keyTitleLabel.Size = UDim2.new(1, -210, 0, 24)
 		keyTitleLabel.ZIndex = 302
 
 		local keySubtitleLabel = createLabel(self, keyCard, self.keySubtitle, 9, Enum.Font.GothamBold)
-		keySubtitleLabel.Position = UDim2.fromOffset(78, 40)
-		keySubtitleLabel.Size = UDim2.new(1, -96, 0, 18)
+		keySubtitleLabel.Position = UDim2.fromOffset(90, 48)
+		keySubtitleLabel.Size = UDim2.new(1, -210, 0, 18)
 		keySubtitleLabel.ZIndex = 302
 		bindTheme(self, keySubtitleLabel, "TextColor3", "Muted")
-		keySubtitleLabel.TextTransparency = 0.35
+		keySubtitleLabel.TextTransparency = 0.38
+
+		local securePill = create("Frame", {
+			Parent = keyCard, AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -20, 0, 31),
+			Size = UDim2.fromOffset(112, 26), BorderSizePixel = 0, ZIndex = 302,
+		})
+		bindTheme(self, securePill, "BackgroundColor3", "Card")
+		securePill.BackgroundTransparency = 0.32
+		corner(securePill, 13)
+		local secureIcon = createLucideIcon(self, securePill, "shield-check", 13, {
+			AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 9, 0.5, 0),
+			Size = UDim2.fromOffset(13, 13), ZIndex = 304,
+		}, "Accent")
+		secureIcon.ImageTransparency = 0.03
+		local secureText = createLabel(self, securePill, "SECURE ACCESS", 8, Enum.Font.GothamBold)
+		secureText.Position = UDim2.fromOffset(29, 0)
+		secureText.Size = UDim2.new(1, -35, 1, 0)
+		secureText.TextTransparency = 0.28
+		secureText.ZIndex = 304
+		bindTheme(self, secureText, "TextColor3", "Muted")
 
 		local keyHeaderLine = create("Frame", {
-			Parent = keyCard, Position = UDim2.fromOffset(18, 70),
-			Size = UDim2.new(1, -36, 0, 1), BorderSizePixel = 0, ZIndex = 302,
+			Parent = keyCard, Position = UDim2.fromOffset(20, 91),
+			Size = UDim2.new(1, -40, 0, 1), BorderSizePixel = 0, ZIndex = 302,
 		})
 		bindTheme(self, keyHeaderLine, "BackgroundColor3", "Stroke")
 		keyHeaderLine.BackgroundTransparency = 0.58
 
-		local keyDescriptionLabel = createLabel(self, keyCard, self.keyDescription, 10, Enum.Font.Gotham)
-		keyDescriptionLabel.Position = UDim2.fromOffset(18, 80)
-		keyDescriptionLabel.Size = UDim2.new(1, -36, 0, 18)
+		local keyDescriptionLabel = createLabel(self, keyCard, self.keyDescription, 10, Enum.Font.GothamMedium)
+		keyDescriptionLabel.Position = UDim2.fromOffset(20, 104)
+		keyDescriptionLabel.Size = UDim2.new(1, -40, 0, 20)
 		keyDescriptionLabel.ZIndex = 302
 		bindTheme(self, keyDescriptionLabel, "TextColor3", "Muted")
-		keyDescriptionLabel.TextTransparency = 0.2
+		keyDescriptionLabel.TextTransparency = 0.18
 
 		local inputHolder = create("Frame", {
-			Parent = keyCard, Position = UDim2.fromOffset(18, 108),
-			Size = UDim2.new(1, -36, 0, 42), BorderSizePixel = 0, ZIndex = 302,
+			Parent = keyCard, Position = UDim2.fromOffset(20, 135),
+			Size = UDim2.new(1, -40, 0, 46), BorderSizePixel = 0, ZIndex = 302,
 		})
 		bindTheme(self, inputHolder, "BackgroundColor3", "Card")
-		corner(inputHolder, 11)
+		inputHolder.BackgroundTransparency = 0.18
+		corner(inputHolder, 12)
 		local inputStroke = stroke(inputHolder, self.theme.Stroke, 0.45, 1)
 		bindTheme(self, inputStroke, "Color", "Stroke")
 
+		local inputIcon = createLucideIcon(self, inputHolder, "key-round", 16, {
+			AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 14, 0.5, 0),
+			Size = UDim2.fromOffset(16, 16), ZIndex = 304,
+		}, "Muted")
+		inputIcon.ImageTransparency = 0.28
+
+		local inputDivider = create("Frame", {
+			Parent = inputHolder, Position = UDim2.fromOffset(42, 10),
+			Size = UDim2.fromOffset(1, 26), BorderSizePixel = 0, ZIndex = 303,
+		})
+		bindTheme(self, inputDivider, "BackgroundColor3", "Stroke")
+		inputDivider.BackgroundTransparency = 0.62
+
 		keyInput = create("TextBox", {
-			Parent = inputHolder, Position = UDim2.fromOffset(12, 0),
-			Size = UDim2.new(1, -24, 1, 0), BackgroundTransparency = 1, BorderSizePixel = 0,
+			Parent = inputHolder, Position = UDim2.fromOffset(55, 0),
+			Size = UDim2.new(1, -69, 1, 0), BackgroundTransparency = 1, BorderSizePixel = 0,
 			ClearTextOnFocus = false, Font = Enum.Font.GothamMedium,
 			PlaceholderText = self.keyPlaceholder, Text = "", TextSize = 12,
 			TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 303,
 		})
 		bindTheme(self, keyInput, "TextColor3", "Text")
 		bindTheme(self, keyInput, "PlaceholderColor3", "Muted")
-		corner(keyInput, 11)
+		corner(keyInput, 12)
+
+		keyInput.Focused:Connect(function()
+			tween(inputStroke, 0.16, { Transparency = 0.05 })
+			tween(inputIcon, 0.16, { ImageTransparency = 0.02 })
+			inputStroke.Color = self.theme.Accent
+			inputIcon.ImageColor3 = self.theme.Accent
+		end)
+		keyInput.FocusLost:Connect(function()
+			tween(inputStroke, 0.16, { Transparency = 0.45 })
+			tween(inputIcon, 0.16, { ImageTransparency = 0.28 })
+			inputStroke.Color = self.theme.Stroke
+			inputIcon.ImageColor3 = self.theme.Muted
+		end)
 
 		local verifyButton = create("TextButton", {
-			Parent = keyCard, Position = UDim2.fromOffset(18, 162),
-			Size = self.keyGetUrl ~= "" and UDim2.new(0.5, -23, 0, 38) or UDim2.new(1, -36, 0, 38),
-			BorderSizePixel = 0, AutoButtonColor = false, Font = Enum.Font.GothamBold,
-			Text = self.keyButtonText, TextSize = 11, ZIndex = 302,
+			Parent = keyCard, Position = UDim2.fromOffset(20, 196),
+			Size = self.keyGetUrl ~= "" and UDim2.new(0.5, -25, 0, 42) or UDim2.new(1, -40, 0, 42),
+			BorderSizePixel = 0, AutoButtonColor = false, Text = "", ZIndex = 302,
 		})
 		bindTheme(self, verifyButton, "BackgroundColor3", "AccentDark")
-		bindTheme(self, verifyButton, "TextColor3", "Text")
-		corner(verifyButton, 11)
+		corner(verifyButton, 12)
+		local verifyIcon = createLucideIcon(self, verifyButton, "log-in", 15, {
+			AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 14, 0.5, 0),
+			Size = UDim2.fromOffset(15, 15), ZIndex = 304,
+		}, "Text")
+		verifyIcon.ImageTransparency = 0.05
+		local verifyText = createLabel(self, verifyButton, self.keyButtonText, 10, Enum.Font.GothamBold)
+		verifyText.Position = UDim2.fromOffset(38, 0)
+		verifyText.Size = UDim2.new(1, -48, 1, 0)
+		verifyText.ZIndex = 304
 
 		local function wireKeyButton(button)
 			local restingSize = button.Size
 			local pressed = false
 			button.MouseEnter:Connect(function()
-				if not pressed then tween(button, 0.12, { BackgroundTransparency = 0.08 }) end
+				if not pressed then tween(button, 0.12, { BackgroundTransparency = 0.06 }) end
 			end)
 			button.MouseButton1Down:Connect(function()
 				pressed = true
 				tween(button, 0.08, {
 					Size = UDim2.new(restingSize.X.Scale, restingSize.X.Offset - 4, restingSize.Y.Scale, restingSize.Y.Offset - 2),
-					BackgroundTransparency = 0.14,
+					BackgroundTransparency = 0.12,
 				})
 			end)
 			local function restore()
@@ -1191,30 +1302,53 @@ function Library.new(data)
 		if self.keyGetUrl ~= "" then
 			local getKeyButton = create("TextButton", {
 				Parent = keyCard, AnchorPoint = Vector2.new(1, 0),
-				Position = UDim2.new(1, -18, 0, 162), Size = UDim2.new(0.5, -23, 0, 38),
-				BorderSizePixel = 0, AutoButtonColor = false, Font = Enum.Font.GothamBold,
-				Text = self.keyGetButtonText, TextSize = 11, ZIndex = 302,
+				Position = UDim2.new(1, -20, 0, 196), Size = UDim2.new(0.5, -25, 0, 42),
+				BorderSizePixel = 0, AutoButtonColor = false, Text = "", ZIndex = 302,
 			})
 			bindTheme(self, getKeyButton, "BackgroundColor3", "Card2")
-			bindTheme(self, getKeyButton, "TextColor3", "Text")
-			corner(getKeyButton, 11)
+			corner(getKeyButton, 12)
 			local getKeyStroke = stroke(getKeyButton, self.theme.Stroke, 0.45, 1)
 			bindTheme(self, getKeyStroke, "Color", "Stroke")
+			local getIcon = createLucideIcon(self, getKeyButton, "link", 15, {
+				AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 14, 0.5, 0),
+				Size = UDim2.fromOffset(15, 15), ZIndex = 304,
+			}, "Muted")
+			getIcon.ImageTransparency = 0.12
+			local getText = createLabel(self, getKeyButton, self.keyGetButtonText, 10, Enum.Font.GothamBold)
+			getText.Position = UDim2.fromOffset(38, 0)
+			getText.Size = UDim2.new(1, -48, 1, 0)
+			getText.ZIndex = 304
 			wireKeyButton(getKeyButton)
 			getKeyButton.MouseButton1Click:Connect(function()
 				if typeof(setclipboard) == "function" then pcall(setclipboard, self.keyGetUrl) end
 				if keyStatus then
 					keyStatus.Text = "Key link copied to clipboard."
+					keyStatus.TextTransparency = 0.05
 					bindTheme(self, keyStatus, "TextColor3", "Accent")
 				end
 			end)
 		end
 
-		keyStatus = createLabel(self, keyCard, "", 9, Enum.Font.GothamMedium)
-		keyStatus.Position = UDim2.fromOffset(18, 210)
-		keyStatus.Size = UDim2.new(1, -36, 0, 20)
-		keyStatus.TextXAlignment = Enum.TextXAlignment.Center
-		keyStatus.ZIndex = 302
+		local statusHolder = create("Frame", {
+			Parent = keyCard, Position = UDim2.fromOffset(20, 252),
+			Size = UDim2.new(1, -40, 0, 42), BorderSizePixel = 0, ZIndex = 302,
+		})
+		bindTheme(self, statusHolder, "BackgroundColor3", "Card")
+		statusHolder.BackgroundTransparency = 0.52
+		corner(statusHolder, 11)
+
+		local statusIcon = createLucideIcon(self, statusHolder, "circle-info", 14, {
+			AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 12, 0.5, 0),
+			Size = UDim2.fromOffset(14, 14), ZIndex = 304,
+		}, "Muted")
+		statusIcon.ImageTransparency = 0.28
+
+		keyStatus = createLabel(self, statusHolder, "Enter your access key to continue.", 9, Enum.Font.GothamMedium)
+		keyStatus.Position = UDim2.fromOffset(36, 0)
+		keyStatus.Size = UDim2.new(1, -48, 1, 0)
+		keyStatus.TextXAlignment = Enum.TextXAlignment.Left
+		keyStatus.TextTransparency = 0.32
+		keyStatus.ZIndex = 304
 		bindTheme(self, keyStatus, "TextColor3", "Muted")
 
 		self.keyOverlay = keyOverlay
@@ -1251,28 +1385,44 @@ function Library.new(data)
 			self.openSize = self.main.Size
 		end
 
+		local function setKeyStatus(message, themeName, iconName)
+			keyStatus.Text = message
+			keyStatus.TextTransparency = 0.05
+			bindTheme(self, keyStatus, "TextColor3", themeName or "Muted")
+			if statusIcon and statusIcon.Parent then
+				bindTheme(self, statusIcon, "ImageColor3", themeName or "Muted")
+				statusIcon.ImageTransparency = 0.02
+			end
+		end
+
 		local function submitKey()
 			local candidate = tostring(keyInput.Text or ""):match("^%s*(.-)%s*$")
 			if candidate == "" then
-				keyStatus.Text = "Enter a key first."
-				bindTheme(self, keyStatus, "TextColor3", "Danger")
+				setKeyStatus("Enter a key first.", "Danger", "triangle-alert")
+				tween(inputStroke, 0.12, { Transparency = 0.02 })
+				inputStroke.Color = self.theme.Danger
 				return
 			end
+			setKeyStatus("Verifying access key...", "Muted", "loader-circle")
 			if validateKey(candidate) then
 				self.keyVerified = true
 				rememberKey(candidate)
-				keyStatus.Text = "Access granted."
-				bindTheme(self, keyStatus, "TextColor3", "Accent")
-				tween(keyCardScale, 0.2, { Scale = math.max(0.55, self.uiScale * 0.94) }, Enum.EasingStyle.Quart, Enum.EasingDirection.In)
-				task.wait(0.16)
+				setKeyStatus("Access granted. Opening Burbanks...", "Accent", "circle-check")
+				tween(keyCardScale, 0.22, { Scale = math.max(0.55, self.uiScale * 0.96) }, Enum.EasingStyle.Quart, Enum.EasingDirection.In)
+				tween(keyCard, 0.22, { Position = UDim2.new(0.5, 0, 0.5, -8) }, Enum.EasingStyle.Quart, Enum.EasingDirection.In)
+				task.wait(0.18)
 				if keyOverlay and keyOverlay.Parent then keyOverlay:Destroy() end
 				animateMainFromKey()
 			else
-				keyStatus.Text = "Invalid key. Try again."
-				bindTheme(self, keyStatus, "TextColor3", "Danger")
-				tween(keyCard, 0.06, { Position = UDim2.new(0.5, -7, 0.5, 0) })
-				task.delay(0.07, function()
-					if keyCard and keyCard.Parent then tween(keyCard, 0.08, { Position = UDim2.fromScale(0.5, 0.5) }) end
+				setKeyStatus("Invalid key. Check it and try again.", "Danger", "circle-x")
+				tween(keyCard, 0.055, { Position = UDim2.new(0.5, -7, 0.5, 10) })
+				task.delay(0.06, function()
+					if keyCard and keyCard.Parent then
+						tween(keyCard, 0.055, { Position = UDim2.new(0.5, 7, 0.5, 10) })
+						task.delay(0.06, function()
+							if keyCard and keyCard.Parent then tween(keyCard, 0.08, { Position = UDim2.new(0.5, 0, 0.5, 10) }) end
+						end)
+					end
 				end)
 			end
 		end
@@ -2260,22 +2410,9 @@ function Library.new(data)
 		Values = { "Default", "Large", "Compact", "Mobile" },
 		Default = self._mobileMode and "Mobile" or (self.sidebarCollapsed and "Compact" or self.desktopSizeMode),
 		Callback = function(mode)
-			if mode == "Mobile" then
-				self:SetMobileMode(true)
-			elseif mode == "Large" then
-				self.desktopSizeMode = "Large"
-				self:SetMobileMode(false)
-				self:SetSidebarCollapsed(false)
-			elseif mode == "Compact" then
-				-- Compact folds the CURRENT desktop preset. If Large was active,
-				-- expanding the sidebar returns to Large instead of Default.
-				self:SetMobileMode(false)
-				self:SetSidebarCollapsed(true)
-			else
-				self.desktopSizeMode = "Default"
-				self:SetMobileMode(false)
-				self:SetSidebarCollapsed(false)
-			end
+			-- One coordinated transition: window, sidebar and content all animate
+			-- to the selected preset instead of snapping/tweening in two stages.
+			self:SetUIMode(mode, true)
 
 			if builtInCompact and builtInCompact.Set then
 				builtInCompact:Set(self.sidebarCollapsed, false)
@@ -2294,7 +2431,7 @@ function Library.new(data)
 		Callback = function(scaleText)
 			local number = tonumber(tostring(scaleText):gsub("%%", ""))
 			if number then
-				self:SetScale(number / 100)
+				self:SetScale(number / 100, true)
 			end
 		end,
 	})
@@ -2304,12 +2441,10 @@ function Library.new(data)
 		Icon = "panel-left-close",
 		Default = self.sidebarCollapsed,
 		Callback = function(enabled)
-			if self._mobileMode then
-				self:SetMobileMode(false)
-			end
-			self:SetSidebarCollapsed(enabled)
+			local targetMode = enabled and "Compact" or self.desktopSizeMode
+			self:SetUIMode(targetMode, true)
 			if builtInMode and builtInMode.Set then
-				builtInMode:Set(enabled and "Compact" or self.desktopSizeMode, false)
+				builtInMode:Set(targetMode, false)
 			end
 		end,
 	})
@@ -2574,6 +2709,7 @@ function Library.new(data)
 	self.openPosition = main.Position
 	self.openSize = main.Size
 	self.startupScale = startupScale
+	self.uiScaleObject = startupScale
 	self.startupOverlay = startupOverlay
 	self.startupCard = startupCard
 	self.startupBlur = startupBlur
@@ -2601,15 +2737,18 @@ function Library.new(data)
 		task.defer(function()
 			local total = self.startupMenuDuration
 			if startupCard and startupCard.Parent then
-				tween(startupCardScale, 0.35, { Scale = 1 }, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
+				tween(startupCard, 0.35, { Position = UDim2.fromScale(0.5, 0.5) }, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
+				tween(startupCardScale, 0.38, { Scale = 1 }, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
 				tween(startupLogo, 0.35, { ImageTransparency = 0 }, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
+				if self.startupLogoText then tween(self.startupLogoText, 0.35, { TextTransparency = 0 }, Enum.EasingStyle.Quart, Enum.EasingDirection.Out) end
 				tween(startupTitleLabel, 0.35, { TextTransparency = 0 }, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
 				tween(startupSubtitleLabel, 0.4, { TextTransparency = 0.25 }, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
-				tween(startupStatusLabel, 0.45, { TextTransparency = 0.45 }, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
+				tween(startupStatusLabel, 0.45, { TextTransparency = 0.18 }, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
 				tween(startupProgressFill, math.max(0.45, total - 0.35), { Size = UDim2.new(1, 0, 1, 0) }, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
 				task.wait(math.max(0.2, total - 0.45))
 				tween(startupCardScale, 0.28, { Scale = 0.96 }, Enum.EasingStyle.Quart, Enum.EasingDirection.In)
 				tween(startupLogo, 0.22, { ImageTransparency = 1 })
+				if self.startupLogoText then tween(self.startupLogoText, 0.22, { TextTransparency = 1 }) end
 				tween(startupTitleLabel, 0.22, { TextTransparency = 1 })
 				tween(startupSubtitleLabel, 0.22, { TextTransparency = 1 })
 				tween(startupStatusLabel, 0.22, { TextTransparency = 1 })
@@ -2626,9 +2765,13 @@ function Library.new(data)
 			if self.keyEnabled and not self.keyVerified then
 				if keyOverlay and keyOverlay.Parent then
 					keyOverlay.Visible = true
+					if keyCard then
+						keyCard.Position = UDim2.new(0.5, 0, 0.5, 18)
+						tween(keyCard, 0.30, { Position = UDim2.new(0.5, 0, 0.5, 10) }, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
+					end
 					if keyCardScale then
-						keyCardScale.Scale = math.max(0.55, self.uiScale * 0.94)
-						tween(keyCardScale, 0.28, { Scale = self.uiScale }, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
+						keyCardScale.Scale = math.max(0.55, self.uiScale * 0.90)
+						tween(keyCardScale, 0.32, { Scale = self.uiScale }, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
 					end
 				end
 				return
@@ -2687,19 +2830,33 @@ function Library:ShowKeySystem()
 end
 Library.showKeySystem = Library.ShowKeySystem
 
-function Library:SetScale(value)
+function Library:SetScale(value, animated)
 	self.uiScale = math.clamp(tonumber(value) or self.uiScale or 1, 0.55, 1.35)
 
-	-- Apply directly to the single root UIScale so the main UI AND profile popup
-	-- always use the exact selected scale. Direct assignment avoids a stale tween
-	-- being overwritten by a mode/sidebar animation.
-	if self.startupScale then
-		self.startupScale.Scale = self.uiScale
+	-- Resolve the REAL UIScale attached to Main every time. This avoids stale
+	-- references after startup/mode changes and makes the Profile Options menu
+	-- scale with the rest of Main because it is parented under Main.
+	local rootScale = self.uiScaleObject
+	if (not rootScale or not rootScale.Parent) and self.main then
+		rootScale = self.main:FindFirstChildOfClass("UIScale")
+	end
+	if rootScale then
+		self.uiScaleObject = rootScale
+		self.startupScale = rootScale
+		if animated == false then
+			rootScale.Scale = self.uiScale
+		else
+			tween(rootScale, 0.22, { Scale = self.uiScale }, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
+		end
 	end
 
-	-- The key system is a separate overlay, so keep it on the same scale too.
+	-- Key System lives outside Main, so mirror the same live scale there.
 	if self.keyCardScale and self.keyCardScale.Parent then
-		self.keyCardScale.Scale = self.uiScale
+		if animated == false then
+			self.keyCardScale.Scale = self.uiScale
+		else
+			tween(self.keyCardScale, 0.22, { Scale = self.uiScale }, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
+		end
 	end
 
 	return self
@@ -2711,7 +2868,8 @@ Library.setUIScale = Library.SetScale
 function Library:GetScale() return self.uiScale end
 Library.GetUIScale = Library.GetScale
 
-function Library:SetSidebarCollapsed(state)
+function Library:SetSidebarCollapsed(state, options)
+	options = options or {}
 	self.sidebarCollapsed = state == true
 	if not self.sidebar or not self.content then return self end
 
@@ -2723,20 +2881,21 @@ function Library:SetSidebarCollapsed(state)
 	local COMPACT_UI_WIDTH = EXPANDED_UI_WIDTH - (EXPANDED_SIDEBAR_WIDTH - COMPACT_SIDEBAR_WIDTH)
 	local sidebarWidth = self.sidebarCollapsed and COMPACT_SIDEBAR_WIDTH or EXPANDED_SIDEBAR_WIDTH
 	local contentX = sidebarWidth + 1
+	local duration = tonumber(options.duration) or 0.22
 
 	-- Fold the sidebar AND the outside of the desktop window inward.
 	-- This keeps the page/content width unchanged instead of leaving an empty
 	-- 117px rail where the expanded sidebar used to be.
-	tween(self.sidebar, 0.18, { Size = UDim2.new(0, sidebarWidth, 1, 0) })
-	tween(self.content, 0.18, {
+	tween(self.sidebar, duration, { Size = UDim2.new(0, sidebarWidth, 1, 0) }, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
+	tween(self.content, duration, {
 		Position = UDim2.fromOffset(contentX, 0),
 		Size = UDim2.new(1, -contentX, 1, 0),
 	})
 
-	if not self._mobileMode and self.main then
+	if not options.skipMainResize and not self._mobileMode and self.main then
 		local targetWidth = self.sidebarCollapsed and COMPACT_UI_WIDTH or EXPANDED_UI_WIDTH
 		local targetSize = UDim2.fromOffset(targetWidth, DESKTOP_UI_HEIGHT)
-		tween(self.main, 0.18, { Size = targetSize }, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
+		tween(self.main, duration, { Size = targetSize }, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
 		-- Keep hide/show animation aware of the folded width.
 		self.openSize = targetSize
 		self.openPosition = self.main.Position
@@ -2753,7 +2912,7 @@ function Library:SetSidebarCollapsed(state)
 		self.playerProfileDivider.BackgroundTransparency = self.sidebarCollapsed and 1 or 0.52
 	end
 	if self.sidebarCollapseIcon then
-		tween(self.sidebarCollapseIcon, 0.18, { Rotation = self.sidebarCollapsed and 180 or 0 })
+		tween(self.sidebarCollapseIcon, duration, { Rotation = self.sidebarCollapsed and 180 or 0 }, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
 	end
 
 	if self.titleLabel then self.titleLabel.Visible = not self.sidebarCollapsed end
@@ -2936,58 +3095,89 @@ function Library:_applyResponsiveLayout()
 	return self
 end
 
-function Library:SetMobileMode(enabled)
+function Library:SetUIMode(mode, animated)
+	mode = tostring(mode or "Default")
+	local duration = animated == false and 0 or 0.30
+	local easing = Enum.EasingStyle.Quart
+
 	self.autoResponsive = false
-	self._mobileMode = enabled == true
+
+	if mode == "Large" then
+		self.desktopSizeMode = "Large"
+		self._mobileMode = false
+		self.sidebarCollapsed = false
+	elseif mode == "Compact" then
+		-- Keep the active desktop preset so Large -> Compact -> expand returns Large.
+		self._mobileMode = false
+		self.sidebarCollapsed = true
+	elseif mode == "Mobile" then
+		self._mobileMode = true
+		self.sidebarCollapsed = true
+	else
+		mode = "Default"
+		self.desktopSizeMode = "Default"
+		self._mobileMode = false
+		self.sidebarCollapsed = false
+	end
 
 	if not self.main then return self end
 
+	local targetSize
 	if self._mobileMode then
-		-- Mobile is a REAL size preset, not only a page-layout flag.
 		local camera = workspace.CurrentCamera
 		local viewport = camera and camera.ViewportSize or Vector2.new(1280, 720)
 		local width = math.clamp(viewport.X - 28, 320, 430)
 		local height = math.clamp(viewport.Y - 36, 390, 540)
-
-		-- Set the flag first so SetSidebarCollapsed does not overwrite the
-		-- mobile window dimensions with desktop compact dimensions.
-		self.sidebarCollapsed = true
-		self.main.Size = UDim2.fromOffset(width, height)
-		self.main.Position = UDim2.fromScale(0.5, 0.5)
-		self.openSize = self.main.Size
-		self.openPosition = self.main.Position
-		self:SetSidebarCollapsed(true)
+		targetSize = UDim2.fromOffset(width, height)
 	else
-		-- Return to the active desktop size preset, preserving compact state.
 		local large = self.desktopSizeMode == "Large"
 		local expandedWidth = large and 900 or 760
 		local desktopHeight = large and 580 or 500
 		local compactWidth = expandedWidth - (175 - 58)
 		local targetWidth = self.sidebarCollapsed and compactWidth or expandedWidth
-		self.main.Size = UDim2.fromOffset(targetWidth, desktopHeight)
-		self.main.Position = UDim2.fromScale(0.5, 0.5)
-		self.openSize = self.main.Size
-		self.openPosition = self.main.Position
-		self:SetSidebarCollapsed(self.sidebarCollapsed)
+		targetSize = UDim2.fromOffset(targetWidth, desktopHeight)
 	end
+
+	-- Sidebar/content move at the exact same time as the window resize.
+	self:SetSidebarCollapsed(self.sidebarCollapsed, {
+		skipMainResize = true,
+		duration = math.max(duration, 0.01),
+	})
+
+	self.main.Position = UDim2.fromScale(0.5, 0.5)
+	if duration > 0 then
+		tween(self.main, duration, { Size = targetSize }, easing, Enum.EasingDirection.Out)
+	else
+		self.main.Size = targetSize
+	end
+
+	self.openSize = targetSize
+	self.openPosition = self.main.Position
 
 	for _, page in ipairs(self.pages) do
 		self:_applyPageLayout(page, self._mobileMode)
 	end
+
 	return self
+end
+Library.setUIMode = Library.SetUIMode
+
+function Library:SetMobileMode(enabled, animated)
+	if enabled == true then
+		return self:SetUIMode("Mobile", animated ~= false)
+	end
+	local returnMode = self.sidebarCollapsed and "Compact" or self.desktopSizeMode
+	return self:SetUIMode(returnMode, animated ~= false)
 end
 Library.setMobileMode = Library.SetMobileMode
 
-function Library:SetDesktopSizeMode(mode)
+function Library:SetDesktopSizeMode(mode, animated)
 	mode = tostring(mode or "Default")
-	self.desktopSizeMode = mode == "Large" and "Large" or "Default"
-	self:SetMobileMode(false)
-	self:SetSidebarCollapsed(self.sidebarCollapsed)
-	return self
+	return self:SetUIMode(mode == "Large" and "Large" or "Default", animated ~= false)
 end
 Library.setDesktopSizeMode = Library.SetDesktopSizeMode
-Library.SetLargeMode = function(self, enabled)
-	return self:SetDesktopSizeMode(enabled == false and "Default" or "Large")
+Library.SetLargeMode = function(self, enabled, animated)
+	return self:SetDesktopSizeMode(enabled == false and "Default" or "Large", animated)
 end
 Library.setLargeMode = Library.SetLargeMode
 
