@@ -1,3 +1,4 @@
+
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
@@ -452,7 +453,22 @@ local function normalizeAssetId(value)
 end
 
 local function corner(object, radius)
-	return create("UICorner", { Parent = object, CornerRadius = UDim.new(0, radius or 6) })
+	-- Stronger NeverLose-style rounding. Small legacy radii were technically
+	-- rounded, but still looked square at normal UI scale.
+	local requested = tonumber(radius) or 8
+	local roundedRadius
+	if requested <= 1 then
+		roundedRadius = 4
+	elseif requested <= 3 then
+		roundedRadius = 7
+	elseif requested <= 5 then
+		roundedRadius = 9
+	elseif requested <= 8 then
+		roundedRadius = 11
+	else
+		roundedRadius = requested
+	end
+	return create("UICorner", { Parent = object, CornerRadius = UDim.new(0, roundedRadius) })
 end
 
 local function stroke(object, color, transparency, thickness)
@@ -704,7 +720,7 @@ local function createBoxedModule(section, height)
 		ClipsDescendants = false,
 	})
 	bindTheme(section.library, holder, "BackgroundColor3", "Card2")
-	corner(holder, 3)
+	corner(holder, 7)
 
 	local rowStroke = stroke(holder, section.library.theme.Stroke, 0.84, 1)
 	bindTheme(section.library, rowStroke, "Color", "Stroke")
@@ -864,10 +880,21 @@ function Library.new(data)
 		end
 	end
 
+	-- Keep exactly ONE Burbanks root GUI. Re-running the script destroys any
+	-- previous Burbanks instance instead of stacking another CoreGui/ScreenGui
+	-- underneath the new one.
+	local rootParent = guiParent()
+	for _, child in ipairs(rootParent:GetChildren()) do
+		if child:IsA("ScreenGui") and (child.Name == self.title or child:GetAttribute("BurbanksRoot") == true) then
+			child:Destroy()
+		end
+	end
+
 	local screenGui = create("ScreenGui", {
-		Name = self.title, Parent = guiParent(),
+		Name = self.title, Parent = rootParent,
 		ResetOnSpawn = false, ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
 	})
+	screenGui:SetAttribute("BurbanksRoot", true)
 
 
 	local pingFrame = create("Frame", {
@@ -1117,6 +1144,7 @@ function Library.new(data)
 		})
 		bindTheme(self, keyInput, "TextColor3", "Text")
 		bindTheme(self, keyInput, "PlaceholderColor3", "Muted")
+		corner(keyInput, 9)
 
 		local verifyButton = create("TextButton", {
 			Parent = keyCard, Position = UDim2.fromOffset(18, 162),
@@ -1237,7 +1265,7 @@ function Library.new(data)
 	})
 	bindTheme(self, main, "BackgroundColor3", "Background")
 	main.BackgroundTransparency = 0.055
-	corner(main, 8)
+	corner(main, 14)
 
 	local startupScale = create("UIScale", { Parent = main, Scale = self.uiScale })
 
@@ -1247,6 +1275,7 @@ function Library.new(data)
 		Image = self.backgroundImageValue, ImageTransparency = self.backgroundTransparency,
 		ScaleType = Enum.ScaleType.Crop, Visible = self.backgroundImageValue ~= "", ZIndex = 0,
 	})
+	corner(backgroundImage, 14)
 
 	local mainStroke = stroke(main, self.theme.Stroke, 0.65, 1)
 	bindTheme(self, mainStroke, "Color", "Stroke")
@@ -1263,6 +1292,18 @@ function Library.new(data)
 		BackgroundTransparency = 0.12, ZIndex = 60,
 	})
 	bindTheme(self, sidebar, "BackgroundColor3", "Sidebar")
+	corner(sidebar, 14)
+
+	-- UICorner rounds all four corners. This small same-color seam squares only
+	-- the INNER/right edge so the sidebar joins the content cleanly while the
+	-- two OUTER/left corners remain visibly rounded.
+	local sidebarSeam = create("Frame", {
+		Name = "SidebarSeam", Parent = sidebar,
+		AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 0, 0, 0),
+		Size = UDim2.new(0, 16, 1, 0), BorderSizePixel = 0, ZIndex = 1,
+	})
+	bindTheme(self, sidebarSeam, "BackgroundColor3", "Sidebar")
+	sidebarSeam.BackgroundTransparency = sidebar.BackgroundTransparency
 
 	local sidebarDivider = create("Frame", {
 		Name = "SidebarDivider", Parent = sidebar,
@@ -1421,7 +1462,7 @@ function Library.new(data)
 		ZIndex = 140,
 	})
 	bindTheme(self, profilePopup, "BackgroundColor3", "Card")
-	corner(profilePopup, 7)
+	corner(profilePopup, 12)
 	local profilePopupStroke = stroke(profilePopup, self.theme.Stroke, 0.48, 1)
 	bindTheme(self, profilePopupStroke, "Color", "Stroke")
 
@@ -1600,7 +1641,7 @@ function Library.new(data)
 			ZIndex = 142,
 		})
 		bindTheme(window, row, "BackgroundColor3", "Card2")
-		corner(row, 3)
+		corner(row, 6)
 
 		local icon = createLucideIcon(window, row, config.Icon or config.icon or "circle", 15, {
 			AnchorPoint = Vector2.new(0, 0.5),
@@ -1758,7 +1799,7 @@ function Library.new(data)
 			ZIndex = 150,
 		})
 		bindTheme(window, choicePopup, "BackgroundColor3", "Card")
-		corner(choicePopup, 5)
+		corner(choicePopup, 10)
 		local choiceStroke = stroke(choicePopup, window.theme.Stroke, 0.48, 1)
 		bindTheme(window, choiceStroke, "Color", "Stroke")
 		padding(choicePopup, 5, 5, 5, 5)
@@ -1786,7 +1827,7 @@ function Library.new(data)
 					ZIndex = 151,
 				})
 				bindTheme(window, option, "BackgroundColor3", "Card2")
-				corner(option, 3)
+				corner(option, 6)
 
 				local optionText = createLabel(window, option, choice, 10, Enum.Font.GothamMedium)
 				optionText.Position = UDim2.fromOffset(8, 0)
@@ -1909,7 +1950,7 @@ function Library.new(data)
 	})
 	bindTheme(profileWindow, addThemeCard, "BackgroundColor3", "Card")
 	addThemeCard.BackgroundTransparency = 0.02
-	corner(addThemeCard, 7)
+	corner(addThemeCard, 12)
 	local addThemeStroke = stroke(addThemeCard, profileWindow.theme.Stroke, 0.38, 1)
 	bindTheme(profileWindow, addThemeStroke, "Color", "Stroke")
 
@@ -1985,7 +2026,7 @@ function Library.new(data)
 	bindTheme(profileWindow, nameBox, "BackgroundColor3", "Background2")
 	bindTheme(profileWindow, nameBox, "TextColor3", "Text")
 	bindTheme(profileWindow, nameBox, "PlaceholderColor3", "Muted")
-	corner(nameBox, 3)
+	corner(nameBox, 10)
 	padding(nameBox, 9, 9, 0, 0)
 
 	local fieldsHost = create("Frame", {
@@ -2044,7 +2085,7 @@ function Library.new(data)
 		})
 		bindTheme(profileWindow, input, "BackgroundColor3", "Background2")
 		bindTheme(profileWindow, input, "TextColor3", "Text")
-		corner(input, 2)
+		corner(input, 8)
 
 		local swatch = create("Frame", {
 			Parent = holder,
@@ -2258,9 +2299,20 @@ function Library.new(data)
 	})
 	bindTheme(self, content, "BackgroundColor3", "Background")
 	content.BackgroundTransparency = 0.60
-	corner(content, 8)
-	local contentStroke = stroke(content, self.theme.Stroke, 0.65, 1)
-	bindTheme(self, contentStroke, "Color", "Stroke")
+	corner(content, 14)
+
+	-- Match the sidebar treatment: keep the OUTER/right corners rounded, but
+	-- fill the INNER/left rounded cutout so there is no doubled/overlaid look.
+	local contentSeam = create("Frame", {
+		Name = "ContentSeam", Parent = content,
+		Position = UDim2.fromOffset(0, 0), Size = UDim2.new(0, 16, 1, 0),
+		BorderSizePixel = 0, ZIndex = 10,
+	})
+	bindTheme(self, contentSeam, "BackgroundColor3", "Background")
+	contentSeam.BackgroundTransparency = content.BackgroundTransparency
+
+	-- The main outer stroke + sidebar divider define the shell. Avoid a second
+	-- rounded stroke around content, which creates the "rounded + square" overlap.
 
 	local contentHeader = create("Frame", {
 		Name = "RightHeader", Parent = content,
@@ -2300,7 +2352,7 @@ function Library.new(data)
 	})
 	bindTheme(self, configFrame, "BackgroundColor3", "Background2")
 	configFrame.BackgroundTransparency = 0.75
-	corner(configFrame, 4)
+	corner(configFrame, 8)
 	local configStroke = stroke(configFrame, self.theme.Stroke, 0.65, 1)
 	bindTheme(self, configStroke, "Color", "Stroke")
 
@@ -2331,7 +2383,7 @@ function Library.new(data)
 	})
 	bindTheme(self, status, "BackgroundColor3", "Background2")
 	status.BackgroundTransparency = 0.82
-	corner(status, 4)
+	corner(status, 8)
 	local statusStroke = stroke(status, self.theme.Stroke, 0.75, 1)
 	bindTheme(self, statusStroke, "Color", "Stroke")
 
@@ -2364,6 +2416,8 @@ function Library.new(data)
 		Size = UDim2.fromOffset(30, 30), BackgroundTransparency = 1,
 		BorderSizePixel = 0, ClipsDescendants = true, ZIndex = 12,
 	})
+	bindTheme(self, searchFrame, "BackgroundColor3", "Background2")
+	corner(searchFrame, 15)
 
 	local searchIcon = create("TextButton", {
 		Name = "SearchIcon", Parent = searchFrame,
@@ -2391,7 +2445,10 @@ function Library.new(data)
 	local searchOpen = false
 	local function setSearchOpen(state)
 		searchOpen = state == true
-		tween(searchFrame, 0.5, { Size = UDim2.fromOffset(searchOpen and 220 or 30, 30) }, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+		tween(searchFrame, 0.5, {
+			Size = UDim2.fromOffset(searchOpen and 220 or 30, 30),
+			BackgroundTransparency = searchOpen and 0.32 or 1,
+		}, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
 		tween(searchGlyph, 0.175, { ImageTransparency = searchOpen and 0.12 or 0.38 })
 		tween(searchBox, 0.35, { TextTransparency = searchOpen and 0.35 or 1 })
 		if searchOpen then
@@ -2599,18 +2656,31 @@ function Library:SetSidebarCollapsed(state)
 	self.sidebarCollapsed = state == true
 	if not self.sidebar or not self.content then return self end
 
-	local sidebarWidth = self.sidebarCollapsed and 58 or 175
-	tween(self.sidebar, 0.18, { Size = UDim2.new(0, sidebarWidth, 1, 0) })
+	local EXPANDED_SIDEBAR_WIDTH = 175
+	local COMPACT_SIDEBAR_WIDTH = 58
+	local EXPANDED_UI_WIDTH = 760
+	local COMPACT_UI_WIDTH = EXPANDED_UI_WIDTH - (EXPANDED_SIDEBAR_WIDTH - COMPACT_SIDEBAR_WIDTH) -- 643
+	local sidebarWidth = self.sidebarCollapsed and COMPACT_SIDEBAR_WIDTH or EXPANDED_SIDEBAR_WIDTH
+	local contentX = sidebarWidth + 1
 
-	-- IMPORTANT:
-	-- Desktop page geometry is locked to the 176px NeverLose content rail.
-	-- Collapsing the sidebar changes ONLY the sidebar visuals, never the page origin.
-	-- On mobile the rail moves beside the compact 58px sidebar.
-	local contentX = self._mobileMode and 59 or 176
+	-- Fold the sidebar AND the outside of the desktop window inward.
+	-- This keeps the page/content width unchanged instead of leaving an empty
+	-- 117px rail where the expanded sidebar used to be.
+	tween(self.sidebar, 0.18, { Size = UDim2.new(0, sidebarWidth, 1, 0) })
 	tween(self.content, 0.18, {
 		Position = UDim2.fromOffset(contentX, 0),
 		Size = UDim2.new(1, -contentX, 1, 0),
 	})
+
+	if not self._mobileMode and self.main then
+		local targetWidth = self.sidebarCollapsed and COMPACT_UI_WIDTH or EXPANDED_UI_WIDTH
+		local currentHeight = self.main.Size.Y.Offset > 0 and self.main.Size.Y.Offset or 500
+		local targetSize = UDim2.fromOffset(targetWidth, currentHeight)
+		tween(self.main, 0.18, { Size = targetSize }, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
+		-- Keep hide/show animation aware of the folded width.
+		self.openSize = targetSize
+		self.openPosition = self.main.Position
+	end
 
 	if self.navigationLabel then self.navigationLabel.Visible = false end
 	if self.playerProfile then self.playerProfile.Visible = not self.sidebarCollapsed end
@@ -2774,15 +2844,21 @@ function Library:_applyResponsiveLayout()
 		self.openPosition = self.main.Position
 		self:SetSidebarCollapsed(true)
 	else
-		self.main.Size = UDim2.fromOffset(760, 500)
+		-- Restore desktop geometry, respecting whichever sidebar mode is active.
+		local desktopWidth = self.sidebarCollapsed and 643 or 760
+		local sidebarWidth = self.sidebarCollapsed and 58 or 175
+		local contentX = sidebarWidth + 1
+		self.main.Size = UDim2.fromOffset(desktopWidth, 500)
 		self.main.Position = UDim2.fromScale(0.5, 0.5)
 		self.openSize = self.main.Size
 		self.openPosition = self.main.Position
 
-		-- Restore desktop NeverLose rail even if the UI was previously mobile.
+		if self.sidebar then
+			self.sidebar.Size = UDim2.new(0, sidebarWidth, 1, 0)
+		end
 		if self.content then
-			self.content.Position = UDim2.fromOffset(176, 0)
-			self.content.Size = UDim2.new(1, -176, 1, 0)
+			self.content.Position = UDim2.fromOffset(contentX, 0)
+			self.content.Size = UDim2.new(1, -contentX, 1, 0)
 		end
 	end
 	for _, page in ipairs(self.pages) do self:_applyPageLayout(page, mobile) end
@@ -3427,7 +3503,7 @@ function Page:addSection(data)
 	})
 	bindTheme(self.library, sectionHandler, "BackgroundColor3", "Card")
 	sectionHandler.BackgroundTransparency = 0.68
-	corner(sectionHandler, 5)
+	corner(sectionHandler, 10)
 	local handlerStroke = stroke(sectionHandler, self.library.theme.Stroke, 0.78, 1)
 	bindTheme(self.library, handlerStroke, "Color", "Stroke")
 
@@ -3482,16 +3558,44 @@ function Section:addButton(data)
 	title.Size = UDim2.new(1, -(infoText and 80 or 46), 1, 0)
 	createInfoHint(self, button, infoText, 34)
 
+	-- Keep the exact resting size so the press animation can never leave
+	-- the module enlarged/shrunken after a click. createBoxedModule() uses
+	-- UDim2.new(1, -10, ...), so restoring to UDim2.new(1, 0, ...) was wrong.
+	local restingSize = module.Size
+	local pressedSize = UDim2.new(
+		restingSize.X.Scale, restingSize.X.Offset - 4,
+		restingSize.Y.Scale, restingSize.Y.Offset
+	)
+	local pressTween
+
+	local function setPressed(state)
+		if pressTween then pressTween:Cancel() end
+		pressTween = tween(
+			module,
+			state and 0.065 or 0.11,
+			{ Size = state and pressedSize or restingSize },
+			Enum.EasingStyle.Quart,
+			Enum.EasingDirection.Out
+		)
+	end
+
 	button.MouseEnter:Connect(function()
 		tween(module, 0.175, { BackgroundTransparency = 0.52 })
 	end)
 	button.MouseLeave:Connect(function()
 		tween(module, 0.175, { BackgroundTransparency = 0.72 })
+		setPressed(false)
+	end)
+	button.MouseButton1Down:Connect(function()
+		setPressed(true)
+	end)
+	button.MouseButton1Up:Connect(function()
+		setPressed(false)
 	end)
 	button.MouseButton1Click:Connect(function()
-		tween(module, 0.07, { Size = UDim2.new(1, -4, 0, 30) })
-		task.wait(0.07)
-		tween(module, 0.07, { Size = UDim2.new(1, 0, 0, 30) })
+		-- Force the visual back before the callback runs in case the callback
+		-- opens/closes UI or yields.
+		setPressed(false)
 		safeCall(options.callback)
 	end)
 
@@ -3606,7 +3710,7 @@ function Section:addTextbox(data)
 		Position = UDim2.new(1, -10, 0, 6), Size = UDim2.fromOffset(118, 18), BorderSizePixel = 0,
 	})
 	bindTheme(self.library, holder, "BackgroundColor3", "Background2")
-	corner(holder, 2)
+	corner(holder, 9)
 	local holderStroke = stroke(holder, self.library.theme.Stroke, 0.5, 1)
 	bindTheme(self.library, holderStroke, "Color", "Stroke")
 
@@ -4031,7 +4135,7 @@ local function createDropdownPopup(section, selectBox, hasSearch)
 		bindTheme(window, search, "TextColor3", "Text")
 		bindTheme(window, search, "PlaceholderColor3", "Muted")
 		search.TextTransparency = 0.15
-		corner(search, 3)
+		corner(search, 9)
 		padding(search, 9, 8, 0, 0)
 		listY = 43
 		listHeight = 125
