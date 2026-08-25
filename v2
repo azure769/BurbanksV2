@@ -873,6 +873,9 @@ function Library.new(data)
 	self.sidebarCollapsed = data.sidebarCollapsed == true or data.SidebarCollapsed == true
 	self.mobileBreakpoint = math.clamp(tonumber(data.mobileBreakpoint or data.MobileBreakpoint) or 700, 480, 1000)
 	self._mobileMode = false
+	-- Desktop window preset. Compact Sidebar folds whichever desktop size is active.
+	self.desktopSizeMode = tostring(data.uiMode or data.UIMode or data.sizeMode or data.SizeMode or "Default")
+	if self.desktopSizeMode ~= "Large" then self.desktopSizeMode = "Default" end
 
 	if typeof(data.theme) == "table" then
 		for key, value in pairs(data.theme) do
@@ -2254,15 +2257,22 @@ function Library.new(data)
 	local builtInMode = UserSettings:AddChoice({
 		Name = "UI Mode",
 		Icon = "panels-top-left",
-		Values = { "Default", "Compact", "Mobile" },
-		Default = self._mobileMode and "Mobile" or (self.sidebarCollapsed and "Compact" or "Default"),
+		Values = { "Default", "Large", "Compact", "Mobile" },
+		Default = self._mobileMode and "Mobile" or (self.sidebarCollapsed and "Compact" or self.desktopSizeMode),
 		Callback = function(mode)
 			if mode == "Mobile" then
 				self:SetMobileMode(true)
+			elseif mode == "Large" then
+				self.desktopSizeMode = "Large"
+				self:SetMobileMode(false)
+				self:SetSidebarCollapsed(false)
 			elseif mode == "Compact" then
+				-- Compact folds the CURRENT desktop preset. If Large was active,
+				-- expanding the sidebar returns to Large instead of Default.
 				self:SetMobileMode(false)
 				self:SetSidebarCollapsed(true)
 			else
+				self.desktopSizeMode = "Default"
 				self:SetMobileMode(false)
 				self:SetSidebarCollapsed(false)
 			end
@@ -2299,7 +2309,7 @@ function Library.new(data)
 			end
 			self:SetSidebarCollapsed(enabled)
 			if builtInMode and builtInMode.Set then
-				builtInMode:Set(enabled and "Compact" or "Default", false)
+				builtInMode:Set(enabled and "Compact" or self.desktopSizeMode, false)
 			end
 		end,
 	})
@@ -2707,8 +2717,10 @@ function Library:SetSidebarCollapsed(state)
 
 	local EXPANDED_SIDEBAR_WIDTH = 175
 	local COMPACT_SIDEBAR_WIDTH = 58
-	local EXPANDED_UI_WIDTH = 760
-	local COMPACT_UI_WIDTH = EXPANDED_UI_WIDTH - (EXPANDED_SIDEBAR_WIDTH - COMPACT_SIDEBAR_WIDTH) -- 643
+	local LARGE = self.desktopSizeMode == "Large"
+	local EXPANDED_UI_WIDTH = LARGE and 900 or 760
+	local DESKTOP_UI_HEIGHT = LARGE and 580 or 500
+	local COMPACT_UI_WIDTH = EXPANDED_UI_WIDTH - (EXPANDED_SIDEBAR_WIDTH - COMPACT_SIDEBAR_WIDTH)
 	local sidebarWidth = self.sidebarCollapsed and COMPACT_SIDEBAR_WIDTH or EXPANDED_SIDEBAR_WIDTH
 	local contentX = sidebarWidth + 1
 
@@ -2723,8 +2735,7 @@ function Library:SetSidebarCollapsed(state)
 
 	if not self._mobileMode and self.main then
 		local targetWidth = self.sidebarCollapsed and COMPACT_UI_WIDTH or EXPANDED_UI_WIDTH
-		local currentHeight = self.main.Size.Y.Offset > 0 and self.main.Size.Y.Offset or 500
-		local targetSize = UDim2.fromOffset(targetWidth, currentHeight)
+		local targetSize = UDim2.fromOffset(targetWidth, DESKTOP_UI_HEIGHT)
 		tween(self.main, 0.18, { Size = targetSize }, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
 		-- Keep hide/show animation aware of the folded width.
 		self.openSize = targetSize
@@ -2900,11 +2911,15 @@ function Library:_applyResponsiveLayout()
 		self.openPosition = self.main.Position
 		self:SetSidebarCollapsed(true)
 	else
-		-- Restore desktop geometry, respecting whichever sidebar mode is active.
-		local desktopWidth = self.sidebarCollapsed and 643 or 760
+		-- Restore desktop geometry, respecting both size preset and sidebar mode.
+		local large = self.desktopSizeMode == "Large"
+		local expandedWidth = large and 900 or 760
+		local desktopHeight = large and 580 or 500
+		local compactWidth = expandedWidth - (175 - 58)
+		local desktopWidth = self.sidebarCollapsed and compactWidth or expandedWidth
 		local sidebarWidth = self.sidebarCollapsed and 58 or 175
 		local contentX = sidebarWidth + 1
-		self.main.Size = UDim2.fromOffset(desktopWidth, 500)
+		self.main.Size = UDim2.fromOffset(desktopWidth, desktopHeight)
 		self.main.Position = UDim2.fromScale(0.5, 0.5)
 		self.openSize = self.main.Size
 		self.openPosition = self.main.Position
@@ -2943,9 +2958,13 @@ function Library:SetMobileMode(enabled)
 		self.openPosition = self.main.Position
 		self:SetSidebarCollapsed(true)
 	else
-		-- Return to the correct desktop preset based on the current compact state.
-		local targetWidth = self.sidebarCollapsed and 643 or 760
-		self.main.Size = UDim2.fromOffset(targetWidth, 500)
+		-- Return to the active desktop size preset, preserving compact state.
+		local large = self.desktopSizeMode == "Large"
+		local expandedWidth = large and 900 or 760
+		local desktopHeight = large and 580 or 500
+		local compactWidth = expandedWidth - (175 - 58)
+		local targetWidth = self.sidebarCollapsed and compactWidth or expandedWidth
+		self.main.Size = UDim2.fromOffset(targetWidth, desktopHeight)
 		self.main.Position = UDim2.fromScale(0.5, 0.5)
 		self.openSize = self.main.Size
 		self.openPosition = self.main.Position
@@ -2958,6 +2977,19 @@ function Library:SetMobileMode(enabled)
 	return self
 end
 Library.setMobileMode = Library.SetMobileMode
+
+function Library:SetDesktopSizeMode(mode)
+	mode = tostring(mode or "Default")
+	self.desktopSizeMode = mode == "Large" and "Large" or "Default"
+	self:SetMobileMode(false)
+	self:SetSidebarCollapsed(self.sidebarCollapsed)
+	return self
+end
+Library.setDesktopSizeMode = Library.SetDesktopSizeMode
+Library.SetLargeMode = function(self, enabled)
+	return self:SetDesktopSizeMode(enabled == false and "Default" or "Large")
+end
+Library.setLargeMode = Library.SetLargeMode
 
 function Library:SetAutoResponsive(enabled)
 	self.autoResponsive = enabled ~= false
