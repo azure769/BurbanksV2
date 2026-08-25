@@ -393,7 +393,7 @@ local THEME_PRESETS = {
 	},
 }
 
-local TEXT_SCALE = 1.16
+local TEXT_SCALE = 1.30
 
 local function copyTable(source)
 	local result = {}
