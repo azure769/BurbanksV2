@@ -1,6 +1,7 @@
 
 
 
+
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
@@ -1544,13 +1545,14 @@ function Library.new(data)
 	bindTheme(self, headLine, "BackgroundColor3", "Stroke")
 	headLine.BackgroundTransparency = 0.65
 
+	-- Main menu toggle. Compact Sidebar is handled separately by SetSidebarCollapsed().
 	local sidebarCollapse = create("TextButton", {
-		Name = "SidebarCollapse", Parent = headFrame,
+		Name = "MenuToggle", Parent = headFrame,
 		AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -5, 0.5, 0),
 		Size = UDim2.fromOffset(20, 20), BackgroundTransparency = 1, BorderSizePixel = 0,
 		Text = "", AutoButtonColor = false, ZIndex = 20,
 	})
-	local sidebarCollapseIcon = createLucideIcon(self, sidebarCollapse, "chevron-left", 14, {
+	local sidebarCollapseIcon = createLucideIcon(self, sidebarCollapse, "menu", 14, {
 		AnchorPoint = Vector2.new(0.5, 0.5),
 		Position = UDim2.fromScale(0.5, 0.5),
 		Size = UDim2.fromOffset(14, 14), ZIndex = 21,
@@ -2696,8 +2698,10 @@ function Library.new(data)
 	self.contentHeader = contentHeader
 	-- self.pagesHost already assigned above immediately after frame creation
 	self.sidebar = sidebar
-	self.sidebarCollapseButton = sidebarCollapse
-	self.sidebarCollapseIcon = sidebarCollapseIcon
+	self.sidebarCollapseButton = sidebarCollapse -- compatibility alias
+	self.sidebarCollapseIcon = sidebarCollapseIcon -- compatibility alias
+	self.menuToggleButton = sidebarCollapse
+	self.menuToggleIcon = sidebarCollapseIcon
 	self.playerProfile = playerProfile
 	self.playerProfileDivider = playerProfileDivider
 	self.usernameLabel = usernameLabel
@@ -2721,8 +2725,11 @@ function Library.new(data)
 	makeDraggable(topbar, main)
 	makeDraggable(contentHeader, main)
 
+	-- This button toggles the WHOLE menu. It no longer changes Compact Sidebar.
 	sidebarCollapse.MouseButton1Click:Connect(function()
-		self:SetSidebarCollapsed(not self.sidebarCollapsed)
+		task.spawn(function()
+			self:ToggleMenu()
+		end)
 	end)
 
 	local camera = workspace.CurrentCamera
@@ -2811,7 +2818,7 @@ function Library.new(data)
 		end)
 	end
 
-	minimize.MouseButton1Click:Connect(function() self:toggle() end)
+	minimize.MouseButton1Click:Connect(function() self:ToggleMenu() end)
 	return self
 end
 
@@ -2913,8 +2920,9 @@ function Library:SetSidebarCollapsed(state, options)
 		self.playerProfileDivider.Visible = not self.sidebarCollapsed
 		self.playerProfileDivider.BackgroundTransparency = self.sidebarCollapsed and 1 or 0.52
 	end
+	-- Menu toggle icon is independent from Compact Sidebar state.
 	if self.sidebarCollapseIcon then
-		tween(self.sidebarCollapseIcon, duration, { Rotation = self.sidebarCollapsed and 180 or 0 }, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
+		self.sidebarCollapseIcon.Rotation = 0
 	end
 
 	if self.titleLabel then self.titleLabel.Visible = not self.sidebarCollapsed end
@@ -3371,22 +3379,96 @@ end
 Library.GetThemePresets = Library.getThemePresets
 
 function Library:toggle(forceState)
-	if self._busy then return end
-	if forceState ~= nil then self._visible = forceState == true else self._visible = not self._visible end
-	self._busy = true
-	if self._visible then
-		self.main.Visible = true
-		self.main.Size = UDim2.fromOffset(self.openSize.X.Offset, 0)
-		tween(self.main, 0.22, { Size = self.openSize, Position = self.openPosition }).Completed:Wait()
+	if self._busy or not self.main then return self end
+
+	local targetVisible
+	if forceState ~= nil then
+		targetVisible = forceState == true
 	else
-		self.openPosition = self.main.Position
-		self.openSize = self.main.Size
-		tween(self.main, 0.2, { Size = UDim2.fromOffset(self.main.AbsoluteSize.X, 0) }).Completed:Wait()
-		self.main.Visible = false
+		targetVisible = not self._visible
 	end
+
+	-- Ignore duplicate requests, but keep the state synchronized with Main.Visible.
+	if targetVisible == self._visible and self.main.Visible == targetVisible then
+		return self
+	end
+
+	self._visible = targetVisible
+	self._busy = true
+
+	local main = self.main
+	local rootScale = self.uiScaleObject
+	if not rootScale or not rootScale.Parent then
+		rootScale = main:FindFirstChildOfClass("UIScale")
+		self.uiScaleObject = rootScale
+	end
+
+	local baseScale = self.uiScale or (rootScale and rootScale.Scale) or 1
+	local tuckedScale = math.max(0.55, baseScale * 0.91)
+	local normalTransparency = 0.055
+
+	if targetVisible then
+		local finalPosition = self.openPosition or main.Position
+		local finalSize = self.openSize or main.Size
+
+		main.Size = finalSize
+		main.Position = UDim2.new(
+			finalPosition.X.Scale, finalPosition.X.Offset,
+			finalPosition.Y.Scale, finalPosition.Y.Offset + 16
+		)
+		main.BackgroundTransparency = 1
+		main.Visible = true
+
+		if rootScale then rootScale.Scale = tuckedScale end
+
+		local openTween = tween(
+			main,
+			0.24,
+			{ Position = finalPosition, BackgroundTransparency = normalTransparency },
+			Enum.EasingStyle.Quart,
+			Enum.EasingDirection.Out
+		)
+		if rootScale then
+			tween(rootScale, 0.28, { Scale = baseScale }, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
+		end
+		openTween.Completed:Wait()
+	else
+		-- Save the current layout exactly as-is, including Large/Compact/Mobile size.
+		self.openPosition = main.Position
+		self.openSize = main.Size
+
+		local hiddenPosition = UDim2.new(
+			self.openPosition.X.Scale, self.openPosition.X.Offset,
+			self.openPosition.Y.Scale, self.openPosition.Y.Offset + 16
+		)
+
+		local closeTween = tween(
+			main,
+			0.20,
+			{ Position = hiddenPosition, BackgroundTransparency = 1 },
+			Enum.EasingStyle.Quart,
+			Enum.EasingDirection.In
+		)
+		if rootScale then
+			tween(rootScale, 0.20, { Scale = tuckedScale }, Enum.EasingStyle.Quart, Enum.EasingDirection.In)
+		end
+		closeTween.Completed:Wait()
+
+		main.Visible = false
+
+		-- Restore the hidden frame so the next open starts from a clean layout.
+		main.Position = self.openPosition
+		main.Size = self.openSize
+		main.BackgroundTransparency = normalTransparency
+		if rootScale then rootScale.Scale = baseScale end
+	end
+
 	self._busy = false
+	return self
 end
 Library.Toggle = Library.toggle
+Library.ToggleMenu = Library.toggle
+Library.toggleMenu = Library.toggle
 
 function Library:Destroy()
 	for _, connection in ipairs(self._connections) do connection:Disconnect() end
